@@ -1,51 +1,48 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { verifyOTP } from "@/lib/otp-store";
-import { authorizedEmails } from "../send-otp/route";
+import { verifyOtpToken } from "@/lib/jwt-otp";
 
-const JWT_SECRET = process.env.JWT_SECRET || "myultrasecretkey123";
+const SESSION_SECRET = process.env.JWT_SECRET || "myultrasecretkey123";
 
 export async function POST(req: Request) {
   try {
-    const { email, otp } = await req.json();
-    console.log(`Attempt for ${email.toLowerCase()} with OTP: ${otp}`);
+    const { email, otp, otpToken } = await req.json();
+    const lower = email?.toLowerCase();
 
-    if (!email || !otp) {
-      return NextResponse.json({ message: "Email and OTP required" }, { status: 400 });
+    if (!email || !otp || !otpToken) {
+      return NextResponse.json({ message: "Missing fields" }, { status: 400 });
     }
 
-    if (!authorizedEmails.includes(email.toLowerCase())) {
-      return NextResponse.json({ message: "Unauthorized email" }, { status: 403 });
-    }
-
-    const valid = verifyOTP(email.toLowerCase(), otp);
-    if (!valid) {
+    // 1. Decode OTP token
+    const decoded = verifyOtpToken(otpToken);
+    if (!decoded) {
       return NextResponse.json({ message: "Invalid or expired OTP" }, { status: 401 });
     }
 
-    console.log(`OTP verified for ${email.toLowerCase()}`);
+    // 2. Validate email + OTP
+    if (decoded.email !== lower || decoded.otp !== otp) {
+      return NextResponse.json({ message: "Invalid or expired OTP" }, { status: 401 });
+    }
 
-    const token = jwt.sign({ email: email.toLowerCase(), role: "admin" }, JWT_SECRET, {
-      expiresIn: "1d",
+    // OTP valid → create session token
+    const sessionToken = jwt.sign({ email: lower, role: "admin" }, SESSION_SECRET, {
+      expiresIn: "1d"
     });
 
-    const res = NextResponse.json({
-      message: "OTP verified successfully",
-      success: true,
-    });
+    const res = NextResponse.json({ success: true });
 
-    res.cookies.set("session", token, {
+    res.cookies.set("session", sessionToken, {
       httpOnly: true,
-      secure: false,
+      secure: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24,
+      maxAge: 60 * 60 * 24
     });
 
-    // Navigate client-side (rely on client to handle redirect)
     return res;
+
   } catch (err) {
-    console.error("Verify OTP Error:", err);
-    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+    console.error(err);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
