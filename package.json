@@ -9,7 +9,8 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate --schema=prisma/schema.prisma && prisma generate --schema=prisma/schema-india.prisma",
     "prisma:generate:usa": "prisma generate --schema=prisma/schema.prisma",
-    "prisma:generate:india": "prisma generate --schema=prisma/schema-india.prisma"
+    "prisma:generate:india": "prisma generate --schema=prisma/schema-india.prisma",
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
