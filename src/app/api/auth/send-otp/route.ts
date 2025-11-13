@@ -7,44 +7,31 @@ export const authorizedEmails = [
   "chiragbora2@gmail.com"
 ];
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { email } = await request.json();
+    const { email } = await req.json();
+    const lower = email?.toLowerCase();
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    if (!email || !authorizedEmails.includes(lower)) {
+      return NextResponse.json({ error: "Unauthorized email" }, { status: 403 });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
-    }
+    // 🔥 Now use generateAndSendOtp (this creates OTP, emails it, AND returns JWT)
+    const result = await generateAndSendOtp(lower, "Admin");
 
-    // ✅ Only allow authorized admin emails
-    if (!authorizedEmails.includes(email)) {
-      console.warn(`Unauthorized OTP request from: ${email}`);
-      return NextResponse.json(
-        { error: "This email is not authorized to access MDR Admin Panel" },
-        { status: 403 }
-      );
-    }
-
-    // ✅ Send OTP email
-    const result = await generateAndSendOtp(email, "Admin");
     if (!result.success) {
       return NextResponse.json({ error: "Failed to send OTP" }, { status: 500 });
     }
 
     return NextResponse.json({
-      message: "OTP sent successfully to your email",
       success: true,
+      message: "OTP sent successfully",
+      otpToken: result.otpToken,  // <-- JWT containing OTP
+      otpExpiry: result.otpExpiry,
     });
 
-  } catch (error) {
-    console.error("Send OTP error:", error);
-    return NextResponse.json(
-      { error: "An error occurred while sending OTP" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Send OTP Error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

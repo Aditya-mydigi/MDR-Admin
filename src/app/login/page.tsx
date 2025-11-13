@@ -25,6 +25,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [otpToken, setOtpToken] = useState(""); // 🟢 NEW
   const [step, setStep] = useState<"email" | "otp">("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,19 +46,16 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      const clonedResponse = response.clone();
-      console.log("Send OTP Response:", {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url,
-      });
-      const text = await clonedResponse.text();
-      console.log("Send OTP Raw Response:", text);
+
       const data = await response.json();
+      console.log("Send OTP:", data);
+
       if (!response.ok) {
         setError(data.error || "Failed to send OTP");
         return;
       }
+
+      setOtpToken(data.otpToken); // 🟢 STORE JWT OTP TOKEN
       setStep("otp");
     } catch (err) {
       console.error("Send OTP Error:", err);
@@ -82,18 +80,18 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase(), otp }),
+        body: JSON.stringify({
+          email: email.toLowerCase(),
+          otp,
+          otpToken, // 🟢 SEND JWT OTP TOKEN
+        }),
       });
-      console.log("Verify OTP Response:", {
-        status: response.status,
-        statusText: response.statusText,
-      });
+
       const data = await response.json();
-      console.log("Verify OTP Data:", data);
+      console.log("Verify OTP:", data);
 
       if (response.ok && data.success) {
-        console.log("✅ OTP verified, redirecting to dashboard...");
-        window.location.href = "/dashboard"; // Force full reload
+        window.location.href = "/dashboard";
       } else {
         setError(data.message || "Invalid OTP");
       }
@@ -108,6 +106,7 @@ export default function LoginPage() {
   const handleBackToEmail = () => {
     setStep("email");
     setOtp("");
+    setOtpToken(""); // 🟢 Clear token
     setError("");
   };
 
@@ -115,6 +114,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex w-full h-screen overflow-hidden bg-white">
+      {/* Left Illustration */}
       <div className="hidden lg:flex flex-1 justify-center items-center px-6 py-10 bg-white">
         <div className="w-full h-full flex justify-center items-center rounded-2xl overflow-hidden">
           <Image
@@ -128,6 +128,7 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Main Login */}
       <div className="flex flex-1 flex-col justify-center items-center px-6 md:px-12 bg-white">
         <div className="mb-10">
           <Image
@@ -151,27 +152,26 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
 
+          {/* Step 1: Email */}
           {step === "email" ? (
             <form onSubmit={handleSendOTP}>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
                 {error && (
                   <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
                     {error}
                   </div>
                 )}
               </CardContent>
+
               <CardFooter>
                 <Button
                   type="submit"
@@ -183,38 +183,26 @@ export default function LoginPage() {
               </CardFooter>
             </form>
           ) : (
+            /* Step 2: OTP Verification */
             <form onSubmit={handleVerifyOTP}>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-display">Email</Label>
-                  <Input
-                    id="email-display"
-                    type="email"
-                    value={email}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                </div>
+                <Label>Email</Label>
+                <Input value={email} disabled className="bg-gray-50" />
 
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Enter OTP</Label>
-                  <div className="flex justify-center" suppressHydrationWarning>
-                    <InputOTP
-                      maxLength={6}
-                      value={otp}
-                      onChange={(value) => setOtp(value)}
-                      disabled={loading}
-                    >
-                      <InputOTPGroup>
-                        {[0, 1, 2, 3, 4, 5].map((i) => (
-                          <InputOTPSlot key={i} index={i} />
-                        ))}
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  <p className="text-xs text-center text-gray-500">
-                    Check your email for the 6-digit code
-                  </p>
+                <Label>Enter OTP</Label>
+                <div className="flex justify-center">
+                  <InputOTP
+                    maxLength={6}
+                    value={otp}
+                    onChange={setOtp}
+                    disabled={loading}
+                  >
+                    <InputOTPGroup>
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <InputOTPSlot key={i} index={i} />
+                      ))}
+                    </InputOTPGroup>
+                  </InputOTP>
                 </div>
 
                 {error && (
@@ -232,12 +220,12 @@ export default function LoginPage() {
                 >
                   {loading ? "Verifying..." : "Verify OTP"}
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   className="w-full"
                   onClick={handleBackToEmail}
-                  disabled={loading}
                 >
                   Back to Email
                 </Button>

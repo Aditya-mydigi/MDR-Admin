@@ -1,18 +1,17 @@
 import nodemailer from "nodemailer";
-import { storeOTP } from "@/lib/otp-store";
+import { createOtpToken } from "@/lib/jwt-otp";
+
+// Generates a 6-digit OTP
+export function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function generateAndSendOtp(email: string, role: string) {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+  const otp = generateOTP();
+  const otpToken = createOtpToken(email.toLowerCase(), otp); // <-- JWT token
+  const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins
 
-  try {
-    storeOTP(email.toLowerCase(), otp); // Normalize email
-    console.log("OTP stored for", email.toLowerCase(), "with value:", otp); // Debug log
-  } catch (error) {
-    console.error("Failed to store OTP for", email, "error:", error);
-    return { success: false, error: "Failed to store OTP" };
-  }
-
+  // Email configuration
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -31,14 +30,20 @@ export async function generateAndSendOtp(email: string, role: string) {
   try {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent successfully to ${email} with OTP: ${otp}`);
-    return { success: true, otp, otpExpiry };
+
+    return {
+      success: true,
+      otpToken, // <-- RETURN JWT TOKEN IN RESPONSE
+      otpExpiry,
+    };
+
   } catch (error) {
     console.error("Email sending failed:", error);
     return { success: false, error: "Email sending failed" };
   }
 }
 
-// ✅ NEW: password reset mailer
+// ========== PASSWORD RESET (unchanged) ==========
 export async function sendPasswordResetEmail(email: string, newPassword: string) {
   try {
     const transporter = nodemailer.createTransport({
