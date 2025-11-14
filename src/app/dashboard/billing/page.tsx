@@ -2,114 +2,21 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  BarChart,
-  Bar,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-} from "recharts";
-import clsx from "clsx";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 import Loader from "@/components/loader";
-import {
-  DollarSign,
-  Users,
-  FileText,
-  TrendingUp,
-  User,
-} from "lucide-react";
-
-// Static data for key metrics
-const metricsData = {
-  totalRevenue: {
-    label: "Total Revenue",
-    value: "$45,231.89",
-    change: "+20.1%",
-    changeType: "positive",
-    icon: <DollarSign className="h-5 w-5" />,
-  },
-  subscriptions: {
-    label: "Subscriptions",
-    value: "+2350",
-    change: "+180.1%",
-    changeType: "positive",
-    icon: <Users className="h-5 w-5" />,
-  },
-  sales: {
-    label: "Sales",
-    value: "+12,234",
-    change: "+19%",
-    changeType: "positive",
-    icon: <FileText className="h-5 w-5" />,
-  },
-  activeNow: {
-    label: "Active Now",
-    value: "+573",
-    change: "+201 since last hour",
-    changeType: "positive",
-    icon: <TrendingUp className="h-5 w-5" />,
-  },
-};
-
-// Bar chart data for overview - each bar needs its own color
-const barChartData = [
-  { month: "Jan", value: 1500, fill: "#ef4444" },
-  { month: "Feb", value: 4500, fill: "#10b981" },
-  { month: "Mar", value: 2500, fill: "#f59e0b" },
-  { month: "Apr", value: 5000, fill: "#10b981" },
-  { month: "May", value: 2000, fill: "#f59e0b" },
-  { month: "Jun", value: 1500, fill: "#ef4444" },
-  { month: "Jul", value: 5500, fill: "#10b981" },
-  { month: "Aug", value: 4000, fill: "#10b981" },
-  { month: "Sep", value: 1000, fill: "#ef4444" },
-  { month: "Oct", value: 3500, fill: "#f59e0b" },
-  { month: "Nov", value: 2000, fill: "#f59e0b" },
-  { month: "Dec", value: 5000, fill: "#10b981" },
-];
-
-// Recent sales data
-const recentSales = [
-  {
-    name: "Olivia Martin",
-    email: "olivia.martin@email.com",
-    amount: "$1,999.00",
-  },
-  {
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    amount: "$39.00",
-  },
-  {
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    amount: "$299.00",
-  },
-  {
-    name: "William Kim",
-    email: "will@email.com",
-    amount: "$99.00",
-  },
-  {
-    name: "Sofia Davis",
-    email: "sofia.davis@email.com",
-    amount: "$39.00",
-  },
-];
+import clsx from "clsx";
 
 export default function BillingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
 
-  /* ✅ Load sidebar state from localStorage */
+  const [activeTab, setActiveTab] = useState("subscription");
+  const [activeSubTab, setActiveSubTab] = useState("india");
+  const [activeTxnSubTab, setActiveTxnSubTab] = useState("txnindia");
+
   useEffect(() => {
     const savedCollapsed = localStorage.getItem("sidebarCollapsed");
     if (savedCollapsed !== null) {
@@ -118,200 +25,384 @@ export default function BillingPage() {
     setLoading(false);
   }, []);
 
-  /* ✅ Save sidebar state to localStorage */
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString());
   }, [sidebarCollapsed]);
 
-
   if (loading) return <Loader />;
 
   return (
-    <div className={clsx("min-h-screen bg-white flex", sidebarOpen && "overflow-hidden")}>
-      <Sidebar 
-        sidebarOpen={sidebarOpen} 
+    <div
+      className={clsx(
+        "min-h-screen bg-white flex",
+        sidebarOpen && "overflow-hidden"
+      )}
+    >
+      <Sidebar
+        sidebarOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onCloseMobile={() => setSidebarOpen(false)}
       />
+
       <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-white">
-        <Header 
-          title="Billing Details" 
+        <Header
+          title="Billing Details"
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           sidebarCollapsed={sidebarCollapsed}
         />
+
         <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          {/* Main Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-white border border-gray-200 p-1 h-auto">
               <TabsTrigger
-                value="overview"
+                value="subscription"
                 className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
               >
-                Overview
+                Subscription
               </TabsTrigger>
+
               <TabsTrigger
-                value="analytics"
+                value="transactions"
                 className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
               >
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger
-                value="reports"
-                className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
-              >
-                Reports
-              </TabsTrigger>
-              <TabsTrigger
-                value="notifications"
-                className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
-              >
-                Notifications
+                Transactions
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="mt-6 space-y-6">
-              {/* Four Key Metrics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(metricsData).map(([key, data]) => (
-                  <Card key={key} className="border border-gray-200 shadow-sm">
+            {/* -------------------------------------------------- */}
+            {/*               SUBSCRIPTION SECTION                 */}
+            {/* -------------------------------------------------- */}
+            <TabsContent value="subscription" className="mt-6 space-y-6">
+              <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
+                <TabsList className="bg-white border border-gray-200 p-1 h-auto">
+                  <TabsTrigger
+                    value="india"
+                    className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
+                  >
+                    IN India
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="usa"
+                    className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
+                  >
+                    US USA
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                  <Card className="border border-gray-200 shadow-sm">
                     <CardContent className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm text-gray-600 font-medium">{data.label}</p>
-                        <div className="text-gray-400">{data.icon}</div>
-                      </div>
-                      <div className="mb-2">
-                        <p className="text-2xl font-bold text-gray-900">{data.value}</p>
-                      </div>
-                      <p className="text-xs text-gray-500">
-                        <span className={clsx(
-                          "font-semibold",
-                          data.changeType === "positive" ? "text-green-600" : "text-red-600"
-                        )}>
-                          {data.change}
-                        </span>
-                        {key === "activeNow" ? "" : " from last month"}
+                      <p className="text-sm text-gray-600 font-medium">
+                        Total Revenue
+                      </p>
+                      <p className="text-3xl font-bold mt-2 text-gray-900">
+                        ₹0.00
                       </p>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
 
-              {/* Overview Chart and Recent Sales */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Overview Bar Chart */}
-                <Card className="lg:col-span-2 border border-gray-200 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Overview</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-[350px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={barChartData} margin={{ top: 20, right: 20, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                          <XAxis
-                            dataKey="month"
-                            stroke="#9ca3af"
-                            fontSize={12}
-                            tickLine={false}
-                            axisLine={false}
-                          />
-                          <YAxis
-                            stroke="#9ca3af"
-                            fontSize={12}
-                            tickLine={false}
-                            axisLine={false}
-                            domain={[0, 6000]}
-                            ticks={[0, 1500, 3000, 4500, 6000]}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "white",
-                              border: "1px solid #e5e7eb",
-                              borderRadius: "6px",
-                              padding: "8px 12px",
-                            }}
-                            formatter={(value: any) => `$${value.toLocaleString()}`}
-                          />
-                          <Bar
-                            dataKey="value"
-                            radius={[8, 8, 0, 0]}
-                          >
-                            {barChartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Card className="border border-gray-200 shadow-sm">
+                    <CardContent className="p-5">
+                      <p className="text-sm text-gray-600 font-medium">
+                        Active Users
+                      </p>
+                      <p className="text-3xl font-bold mt-2 text-gray-900">0</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-gray-200 shadow-sm">
+                    <CardContent className="p-5">
+                      <p className="text-sm text-gray-600 font-medium">
+                        Total Subscriptions
+                      </p>
+                      <p className="text-3xl font-bold mt-2 text-gray-900">0</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* INDIA SUB TABLE */}
+                <TabsContent value="india">
+                  <Card className="border border-gray-200 shadow-sm mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        India Subscriptions
+                      </CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-max border-collapse">
+                          <thead>
+                            <tr className="text-left text-gray-600 text-sm border-b">
+                              <th className="py-3">User</th>
+                              <th>Email</th>
+                              <th>Subscription ID</th>
+                              <th>Start Date</th>
+                              <th>Amount</th>
+                              <th>Coupon</th>
+                              <th>Transactions</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {[
+                              {
+                                name: "Rohan Kumar",
+                                email: "rohan.k@example.com",
+                              },
+                              {
+                                name: "Priya Sharma",
+                                email: "priya.s@example.com",
+                              },
+                              {
+                                name: "Arjun Verma",
+                                email: "arjunv@example.com",
+                              },
+                              {
+                                name: "Sneha Patel",
+                                email: "snehapatel@example.com",
+                              },
+                              {
+                                name: "Kunal Singh",
+                                email: "kunalsingh@example.com",
+                              },
+                            ].map((row, idx) => (
+                              <tr key={idx} className="text-sm border-b">
+                                <td className="py-3">{row.name}</td>
+                                <td>{row.email}</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>₹0.00</td>
+                                <td>—</td>
+                                <td>0</td>
+                                <td>
+                                  <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs">
+                                    Inactive
+                                  </span>
+                                </td>
+                              </tr>
                             ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                {/* Recent Sales Card */}
-                <Card className="border border-gray-200 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Recent Sales</CardTitle>
-                    <p className="text-sm text-gray-500 mt-1">
-                      You made 265 sales this month.
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {recentSales.map((sale, index) => (
-                        <div key={index} className="flex items-center gap-3 pb-4 border-b last:border-0 last:pb-0">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            <User className="h-5 w-5 text-gray-500" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {sale.name}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {sale.email}
-                            </p>
-                          </div>
-                          <div className="text-sm font-semibold text-green-600">
-                            {sale.amount}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                {/* USA SUB TABLE */}
+                <TabsContent value="usa">
+                  <Card className="border border-gray-200 shadow-sm mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        USA Subscriptions
+                      </CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-max border-collapse">
+                          <thead>
+                            <tr className="text-left text-gray-600 text-sm border-b">
+                              <th className="py-3">User</th>
+                              <th>Email</th>
+                              <th>Subscription ID</th>
+                              <th>Start Date</th>
+                              <th>Amount</th>
+                              <th>Transactions</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {[
+                              {
+                                name: "John Walker",
+                                email: "johnw@example.com",
+                              },
+                              {
+                                name: "Emily Carter",
+                                email: "emilyc@example.com",
+                              },
+                              {
+                                name: "Michael Adams",
+                                email: "m.adams@example.com",
+                              },
+                              {
+                                name: "Sophia Turner",
+                                email: "sophia.t@example.com",
+                              },
+                              {
+                                name: "David Harris",
+                                email: "d.harris@example.com",
+                              },
+                            ].map((row, idx) => (
+                              <tr key={idx} className="text-sm border-b">
+                                <td className="py-3">{row.name}</td>
+                                <td>{row.email}</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>$0.00</td>
+                                <td>0</td>
+                                <td>
+                                  <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs">
+                                    Inactive
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
-            <TabsContent value="analytics" className="mt-6">
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Analytics</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Analytics content coming soon...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            {/* -------------------------------------------------- */}
+            {/*                  TRANSACTIONS SECTION              */}
+            {/* -------------------------------------------------- */}
+            <TabsContent value="transactions" className="mt-6 space-y-6">
+              <Tabs value={activeTxnSubTab} onValueChange={setActiveTxnSubTab}>
+                <TabsList className="bg-white border border-gray-200 p-1 h-auto">
+                  <TabsTrigger
+                    value="txnindia"
+                    className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
+                  >
+                    IN India
+                  </TabsTrigger>
 
-            <TabsContent value="reports" className="mt-6">
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Reports</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Reports content coming soon...</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  <TabsTrigger
+                    value="txnusa"
+                    className="px-4 py-2 data-[state=active]:bg-[#0a3a7a] data-[state=active]:text-white"
+                  >
+                    US USA
+                  </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="notifications" className="mt-6">
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Notifications</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600">Notifications content coming soon...</p>
-                </CardContent>
-              </Card>
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                  <input
+                    placeholder="Search User Name"
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full"
+                  />
+                  <input
+                    placeholder="Search Transaction ID"
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full"
+                  />
+                  <input
+                    placeholder="Search Subscription ID"
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm w-full"
+                  />
+                </div>
+
+                {/* INDIA TRANSACTION TABLE */}
+                <TabsContent value="txnindia">
+                  <Card className="border border-gray-200 shadow-sm mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        India Transactions
+                      </CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-max border-collapse">
+                          <thead>
+                            <tr className="text-left text-gray-600 text-sm border-b">
+                              <th className="py-3">User Name</th>
+                              <th>Subscription ID</th>
+                              <th>Transaction ID</th>
+                              <th>Date</th>
+                              <th>Amount</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {[
+                              { name: "Rohan Kumar", date: "2024-01-10" },
+                              { name: "Priya Sharma", date: "2024-01-12" },
+                              { name: "Arjun Verma", date: "2024-01-14" },
+                              { name: "Sneha Patel", date: "2024-01-15" },
+                              { name: "Kunal Singh", date: "2024-01-17" },
+                            ].map((row, idx) => (
+                              <tr key={idx} className="text-sm border-b">
+                                <td className="py-3">{row.name}</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>{row.date}</td>
+                                <td>₹0.00</td>
+                                <td>
+                                  <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs">
+                                    Failed
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* USA TRANSACTION TABLE */}
+                <TabsContent value="txnusa">
+                  <Card className="border border-gray-200 shadow-sm mt-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        USA Transactions
+                      </CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-max border-collapse">
+                          <thead>
+                            <tr className="text-left text-gray-600 text-sm border-b">
+                              <th className="py-3">User Name</th>
+                              <th>Subscription ID</th>
+                              <th>Transaction ID</th>
+                              <th>Date</th>
+                              <th>Amount</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {[
+                              { name: "John Walker", date: "2024-02-01" },
+                              { name: "Emily Carter", date: "2024-02-03" },
+                              { name: "Michael Adams", date: "2024-02-05" },
+                              { name: "Sophia Turner", date: "2024-02-06" },
+                              { name: "David Harris", date: "2024-02-07" },
+                            ].map((row, idx) => (
+                              <tr key={idx} className="text-sm border-b">
+                                <td className="py-3">{row.name}</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>{row.date}</td>
+                                <td>$0.00</td>
+                                <td>
+                                  <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs">
+                                    Failed
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         </main>
@@ -319,4 +410,3 @@ export default function BillingPage() {
     </div>
   );
 }
-
