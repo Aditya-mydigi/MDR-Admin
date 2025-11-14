@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { prismaIndia, prismaUSA } from "@/lib/prisma"; // ✅ both clients
+import { prismaIndia, prismaUSA } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    // 🗓️ Current month boundaries
+    // Dates of current month
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    // ✅ Run queries for both DBs in parallel
+    // Parallel DB calls
     const [
       indiaUsers,
       indiaActive,
@@ -64,51 +64,55 @@ export async function GET() {
       }),
     ]);
 
-    // 🧮 Combine results from both DBs
-    const totalUsers = indiaUsers + usaUsers;
-    const activeUsers = indiaActive + usaActive;
-    const newSignupsThisMonth = indiaNewSignups + usaNewSignups;
+    // Currency conversion rate
+    const USD_TO_INR = 88;
 
-    const totalRevenue =
-      Number(indiaRevenue._sum.final_amount || 0) +
-      Number(usaRevenue._sum.final_amount || 0);
+    // India revenue (INR)
+    const indiaTotalRev = Number(indiaRevenue._sum.final_amount || 0);
+    const indiaMonthlyRev = Number(indiaRevenueMonth._sum.final_amount || 0);
 
-    const monthlyRevenue =
-      Number(indiaRevenueMonth._sum.final_amount || 0) +
-      Number(usaRevenueMonth._sum.final_amount || 0);
+    // USA revenue (USD)
+    const usaTotalRevUSD = Number(usaRevenue._sum.final_amount || 0);
+    const usaMonthlyRevUSD = Number(usaRevenueMonth._sum.final_amount || 0);
 
-    // 📊 Structure response
+    // Convert only total to INR
+    const totalRevenueINR = indiaTotalRev + usaTotalRevUSD * USD_TO_INR;
+    const monthlyRevenueINR = indiaMonthlyRev + usaMonthlyRevUSD * USD_TO_INR;
+
     const stats = {
-      totalUsers,
-      activeUsers,
-      newSignupsThisMonth,
+      totalUsers: indiaUsers + usaUsers,
+      activeUsers: indiaActive + usaActive,
+      newSignupsThisMonth: indiaNewSignups + usaNewSignups,
+
+      // ALWAYS INR
       revenue: {
-        total: totalRevenue,
-        thisMonth: monthlyRevenue,
+        total: totalRevenueINR,
+        thisMonth: monthlyRevenueINR,
       },
+
       breakdown: {
         india: {
           users: indiaUsers,
           active: indiaActive,
           newSignups: indiaNewSignups,
-          totalRevenue: indiaRevenue._sum.final_amount || 0,
-          monthlyRevenue: indiaRevenueMonth._sum.final_amount || 0,
+          totalRevenue: indiaTotalRev, // INR
+          monthlyRevenue: indiaMonthlyRev, // INR
         },
         usa: {
           users: usaUsers,
           active: usaActive,
           newSignups: usaNewSignups,
-          totalRevenue: usaRevenue._sum.final_amount || 0,
-          monthlyRevenue: usaRevenueMonth._sum.final_amount || 0,
+          totalRevenue: usaTotalRevUSD, // USD
+          monthlyRevenue: usaMonthlyRevUSD, // USD
         },
       },
     };
 
     return NextResponse.json({ success: true, stats });
   } catch (error) {
-    console.error("❌ Dashboard fetch error:", error);
+    console.error("Dashboard Error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to load dashboard data" },
+      { success: false, message: "Failed to load data" },
       { status: 500 }
     );
   }

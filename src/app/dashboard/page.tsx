@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,108 +45,28 @@ import {
   ChevronsRight,
 } from "lucide-react";
 
-// ---------- STATIC trend data (unchanged) ----------
-const staticTrends = {
-  activeUsers: [
-    { day: "Mon", value: 11000 },
-    { day: "Tue", value: 11200 },
-    { day: "Wed", value: 11300 },
-    { day: "Thu", value: 11500 },
-    { day: "Fri", value: 11800 },
-    { day: "Sat", value: 12000 },
-    { day: "Sun", value: 12450 },
-  ],
-  newSignups: [
-    { day: "Mon", value: 2200 },
-    { day: "Tue", value: 2180 },
-    { day: "Wed", value: 2150 },
-    { day: "Thu", value: 2140 },
-    { day: "Fri", value: 2130 },
-    { day: "Sat", value: 2140 },
-    { day: "Sun", value: 2145 },
-  ],
-  totalRecords: [
-    { day: "Mon", value: 8500 },
-    { day: "Tue", value: 8800 },
-    { day: "Wed", value: 9000 },
-    { day: "Thu", value: 9200 },
-    { day: "Fri", value: 9400 },
-    { day: "Sat", value: 9600 },
-    { day: "Sun", value: 9830 },
-  ],
-  revenue: [
-    { day: "Mon", value: 7.2 },
-    { day: "Tue", value: 7.4 },
-    { day: "Wed", value: 7.6 },
-    { day: "Thu", value: 7.8 },
-    { day: "Fri", value: 8.0 },
-    { day: "Sat", value: 8.1 },
-    { day: "Sun", value: 8.2 },
-  ],
-};
+// ---------- Type Definitions ----------
+interface TrendData {
+  day: string;
+  value: number;
+}
 
-// ---------- INITIAL KPI data (values will be updated from API) ----------
-const initialKpiData = {
-  activeUsers: {
-    label: "Active Users (DAU)",
-    value: "--",
-    change: "+5.6%",
-    changeType: "positive",
-    trend: staticTrends.activeUsers,
-  },
-  newSignups: {
-    label: "New Signups",
-    value: "--",
-    change: "-2%",
-    changeType: "negative",
-    trend: staticTrends.newSignups,
-  },
-  totalRecords: {
-    label: "Total Records Created",
-    value: "--",
-    change: "+12%",
-    changeType: "positive",
-    trend: staticTrends.totalRecords,
-  },
-  revenue: {
-    label: "Revenue (MTD)",
-    value: "--",
-    change: "+9%",
-    changeType: "positive",
-    trend: staticTrends.revenue,
-  },
-  // static cards (unchanged)
-  appointments: {
-    label: "Appointments Today",
-    value: "320",
-    change: "+5.6%",
-    changeType: "positive",
-    trend: [
-      { day: "Mon", value: 280 },
-      { day: "Tue", value: 290 },
-      { day: "Wed", value: 300 },
-      { day: "Thu", value: 310 },
-      { day: "Fri", value: 315 },
-      { day: "Sat", value: 318 },
-      { day: "Sun", value: 320 },
-    ],
-  },
-  systemErrors: {
-    label: "System Errors",
-    value: "4",
-    change: "-67%",
-    changeType: "negative",
-    trend: [
-      { day: "Mon", value: 12 },
-      { day: "Tue", value: 10 },
-      { day: "Wed", value: 8 },
-      { day: "Thu", value: 6 },
-      { day: "Fri", value: 5 },
-      { day: "Sat", value: 4 },
-      { day: "Sun", value: 4 },
-    ],
-  },
-};
+interface KpiItem {
+  label: string;
+  value: string;
+  change: string;
+  changeType: string;
+  trend: TrendData[];
+}
+
+interface KpiData {
+  activeUsers: KpiItem;
+  newSignups: KpiItem;
+  totalRecords: KpiItem;
+  revenue: KpiItem;
+  appointments: KpiItem;
+  systemErrors: KpiItem;
+}
 
 // ---------- Static table data (unchanged) ----------
 const tableData = [
@@ -201,7 +120,7 @@ const tableData = [
   },
 ];
 
-// ---------- Area chart (unchanged) ----------
+// ---------- Area chart data (unchanged) ----------
 const areaChartData = [
   { date: "Apr 15", visitors: 4500, prev: 4200 },
   { date: "Apr 20", visitors: 5200, prev: 4800 },
@@ -221,37 +140,108 @@ const areaChartData = [
   { date: "Jun 30", visitors: 9500, prev: 9100 },
 ];
 
+// ---------- Initial KPI data ----------
+const initialKpiData: KpiData = {
+  activeUsers: {
+    label: "Active Users (DAU)",
+    value: "--",
+    change: "+0%",
+    changeType: "positive",
+    trend: [],
+  },
+  newSignups: {
+    label: "New Signups",
+    value: "--",
+    change: "+0%",
+    changeType: "positive",
+    trend: [],
+  },
+  totalRecords: {
+    label: "Total Records Created",
+    value: "--",
+    change: "+0%",
+    changeType: "positive",
+    trend: [],
+  },
+  revenue: {
+    label: "Revenue (MTD)",
+    value: "--",
+    change: "+0%",
+    changeType: "positive",
+    trend: [],
+  },
+  appointments: {
+    label: "Appointments Today",
+    value: "320",
+    change: "+5.6%",
+    changeType: "positive",
+    trend: [
+      { day: "Mon", value: 280 },
+      { day: "Tue", value: 290 },
+      { day: "Wed", value: 300 },
+      { day: "Thu", value: 310 },
+      { day: "Fri", value: 315 },
+      { day: "Sat", value: 318 },
+      { day: "Sun", value: 320 },
+    ],
+  },
+  systemErrors: {
+    label: "System Errors",
+    value: "4",
+    change: "-67%",
+    changeType: "negative",
+    trend: [
+      { day: "Mon", value: 12 },
+      { day: "Tue", value: 10 },
+      { day: "Wed", value: 8 },
+      { day: "Thu", value: 6 },
+      { day: "Fri", value: 5 },
+      { day: "Sat", value: 4 },
+      { day: "Sun", value: 4 },
+    ],
+  },
+};
+
+// ---------- Helper to generate synthetic trend data ----------
+const generateTrend = (baseValue: number, key: string): TrendData[] => {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const isRevenue = key === "revenue";
+  return days.map((day, i) => {
+    const variation = isRevenue ? 0.05 : 0.1;
+    const factor = 1 + Math.random() * variation * (i % 2 === 0 ? 1 : -1);
+    return {
+      day,
+      value: isRevenue
+        ? Number((baseValue * factor).toFixed(2))
+        : Math.round(baseValue * factor),
+    };
+  });
+};
+
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [kpiData, setKpiData] = useState<KpiData>(initialKpiData);
+  const [region, setRegion] = useState<"Total" | "India" | "USA">("Total");
 
-  // KPI state (we keep the entire object so trends/labels/changes remain unchanged)
-  const [kpiData, setKpiData] = useState(initialKpiData);
-
-  /* ✅ Load sidebar state from localStorage */
+  /* Load sidebar state from localStorage */
   useEffect(() => {
     const savedCollapsed = localStorage.getItem("sidebarCollapsed");
     if (savedCollapsed !== null) {
       setSidebarCollapsed(savedCollapsed === "true");
     }
-    setLoading(false);
   }, []);
 
-  /* ✅ Save sidebar state to localStorage */
+  /* Save sidebar state to localStorage */
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString());
   }, [sidebarCollapsed]);
 
-  /* ✅ Fetch dashboard stats and update the four dynamic cards:
-       - activeUsers <- stats.activeUsers
-       - newSignups <- stats.newSignupsThisMonth
-       - totalRecords <- stats.totalUsers (you selected Option A)
-       - revenue <- stats.revenue.thisMonth (MTD)
-  */
+  /* Fetch dashboard stats and update KPI cards */
   useEffect(() => {
     let mounted = true;
     const fetchStats = async () => {
@@ -260,72 +250,115 @@ export default function DashboardPage() {
         if (!res.ok) throw new Error("Failed to fetch dashboard");
         const payload = await res.json();
         if (!mounted) return;
-
         if (payload && payload.success && payload.stats) {
           const s = payload.stats;
-
           // Helper: format numbers with commas
-          const nf = (n: any) => {
+          const nf = (n: any): string => {
             if (n === null || n === undefined) return "--";
             if (typeof n === "number") return n.toLocaleString();
             return String(n);
           };
+          // Format revenue: show currency with 2 decimals
 
-          // Format revenue: show currency with 2 decimals (you can tweak currency)
-          const formatCurrency = (n: any) => {
+          const formatCurrency = (
+            n: any,
+            region: "Total" | "India" | "USA"
+          ): string => {
             if (n === null || n === undefined) return "--";
-            if (typeof n !== "number") return String(n);
-            // display as plain number with grouping; you can swap currency if required
-            return `₹${n.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`;
+
+            let num = typeof n === "number" ? n : parseFloat(n);
+            if (isNaN(num)) return String(n);
+
+            const rounded = Math.round(num);
+
+            // OPTION 1:
+            // "Total" should always show INDIAN currency (₹)
+            if (region === "Total") {
+              return `₹${rounded.toLocaleString("en-IN")}`;
+            }
+
+            // India → ₹
+            if (region === "India") {
+              return `₹${rounded.toLocaleString("en-IN")}`;
+            }
+
+            // USA → $
+            if (region === "USA") {
+              return `$${rounded.toLocaleString("en-US")}`;
+            }
+
+            return "--";
           };
 
-          setKpiData((prev) => ({
-            ...prev,
-            activeUsers: {
-              ...prev.activeUsers,
-              value: nf(s.activeUsers),
-              // keep existing change/trend
-            },
-            newSignups: {
-              ...prev.newSignups,
-              value: nf(s.newSignupsThisMonth),
-            },
-            totalRecords: {
-              ...prev.totalRecords,
-              // Option A: totalUsers used as Total Records Created
-              value: nf(s.totalUsers),
-            },
-            revenue: {
-              ...prev.revenue,
-              value:
-                // prefer month number if available; fallback to total if not available
-                s.revenue && typeof s.revenue.thisMonth === "number"
-                  ? formatCurrency(s.revenue.thisMonth)
-                  : s.revenue && typeof s.revenue.total === "number"
-                  ? formatCurrency(s.revenue.total)
-                  : "--",
-            },
-          }));
+          // Update KPI data based on region
+          // Even better - handle the data structure explicitly
+          const updateKpiData = (): KpiData => {
+            let active, newSignups, users, monthlyRevenue;
+
+            if (region === "Total") {
+              active = s.activeUsers;
+              newSignups = s.newSignupsThisMonth;
+              users = s.totalUsers;
+              monthlyRevenue = s.revenue?.thisMonth;
+            } else if (region === "India") {
+              active = s.breakdown.india.active;
+              newSignups = s.breakdown.india.newSignups;
+              users = s.breakdown.india.users;
+              monthlyRevenue = s.breakdown.india.monthlyRevenue;
+            } else {
+              // USA
+              active = s.breakdown.usa.active;
+              newSignups = s.breakdown.usa.newSignups;
+              users = s.breakdown.usa.users;
+              monthlyRevenue = s.breakdown.usa.monthlyRevenue;
+            }
+
+            return {
+              ...initialKpiData,
+              activeUsers: {
+                ...initialKpiData.activeUsers,
+                value: nf(active),
+                trend: generateTrend(active || 1000, "activeUsers"),
+              },
+              newSignups: {
+                ...initialKpiData.newSignups,
+                value: nf(newSignups),
+                trend: generateTrend(newSignups || 200, "newSignups"),
+              },
+              totalRecords: {
+                ...initialKpiData.totalRecords,
+                value: nf(users),
+                trend: generateTrend(users || 5000, "totalRecords"),
+              },
+              revenue: {
+                ...initialKpiData.revenue,
+                // Pass the region to formatCurrency
+                value: formatCurrency(monthlyRevenue, region),
+                trend: generateTrend(monthlyRevenue || 1000, "revenue"),
+              },
+              appointments: initialKpiData.appointments,
+              systemErrors: initialKpiData.systemErrors,
+            };
+          };
+          setKpiData(updateKpiData());
+          setLoading(false);
         } else {
           console.warn(
             "Dashboard API returned no stats or success=false",
             payload
           );
+          setLoading(false);
         }
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
+        setLoading(false);
       }
     };
-
     fetchStats();
-
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [region]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -345,11 +378,9 @@ export default function DashboardPage() {
 
   if (loading) return <Loader />;
 
-  // Helper: map changeType -> colors (Option A: negative -> yellow per your choice)
   const colorFor = (key: string, changeType: string | undefined) => {
     if (key === "systemErrors") return "#ef4444"; // red
     if (changeType === "positive") return "#16a34a"; // green
-    // Option A: negative -> yellow like image
     return "#f59e0b"; // yellow/orange
   };
 
@@ -373,13 +404,33 @@ export default function DashboardPage() {
           sidebarCollapsed={sidebarCollapsed}
         />
         <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+          {/* Toggle Buttons */}
+          <div className="flex gap-4 mb-4">
+            <Button
+              variant={region === "Total" ? "default" : "outline"}
+              onClick={() => setRegion("Total")}
+            >
+              Total
+            </Button>
+            <Button
+              variant={region === "India" ? "default" : "outline"}
+              onClick={() => setRegion("India")}
+            >
+              India
+            </Button>
+            <Button
+              variant={region === "USA" ? "default" : "outline"}
+              onClick={() => setRegion("USA")}
+            >
+              USA
+            </Button>
+          </div>
           {/* Six KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(kpiData).map(([key, data]) => (
               <Card
                 key={key}
                 className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
-                // match image: larger radius and lighter border/shadow
                 style={{ borderRadius: 10 }}
               >
                 <CardContent className="p-6">
@@ -398,7 +449,6 @@ export default function DashboardPage() {
                           : "text-gray-900"
                       )}
                     >
-                      {/* For revenue we expect already formatted value like ₹x.xx */}
                       {data.value}
                     </p>
                     <span
@@ -412,15 +462,12 @@ export default function DashboardPage() {
                       {data.change} from last month
                     </span>
                   </div>
-
-                  {/* mini line chart that matches the image */}
                   <div className="h-[55px] -mx-2 mt-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart
                         data={data.trend}
                         margin={{ top: 5, right: 6, left: 6, bottom: 5 }}
                       >
-                        {/* no axes visible, no grid */}
                         <XAxis dataKey="day" hide />
                         <YAxis hide domain={["dataMin", "dataMax"]} />
                         <Tooltip
@@ -452,7 +499,6 @@ export default function DashboardPage() {
               </Card>
             ))}
           </div>
-
           {/* Data Table Section */}
           <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-4 border-b">
@@ -634,7 +680,6 @@ export default function DashboardPage() {
                   </TableBody>
                 </Table>
               </div>
-              {/* Pagination */}
               <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                 <div className="text-sm text-gray-600">
                   {selectedRows.length} of {tableData.length} row(s) selected.
@@ -716,7 +761,6 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-
           {/* Area Chart Section */}
           <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-4 border-b">
