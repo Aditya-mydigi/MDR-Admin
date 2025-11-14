@@ -66,6 +66,7 @@ type User = {
   phone_num?: string | null;
   expiry_date?: string | null;
   created_at?: string | null;
+  region?: string; // Added region for clarity
 };
 
 export default function UsersPage() {
@@ -88,6 +89,10 @@ export default function UsersPage() {
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [resetLink, setResetLink] = useState("");
   const [filterText, setFilterText] = useState("");
+  // New state for region toggle
+  const [regionFilter, setRegionFilter] = useState<"total" | "india" | "usa">(
+    "total"
+  );
 
   /* ✅ Load sidebar state from localStorage */
   useEffect(() => {
@@ -121,13 +126,13 @@ export default function UsersPage() {
     phone_num: u.phone_num ?? u.phone ?? null,
     expiry_date: u.expiry_date ?? u.expiryDate ?? null,
     created_at: u.created_at ?? u.createdAt ?? null,
+    region: u.region ?? "", // Ensure region is included
   });
 
-  /* ✅ Fetch All Users (fetch all, frontend will paginate) */
+  /* ✅ Fetch All Users */
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // requesting a large limit so we retrieve all users from backend
       const res = await fetch(`/api/users?page=1&limit=50000`, {
         cache: "no-store",
       });
@@ -152,6 +157,14 @@ export default function UsersPage() {
   useEffect(() => {
     let filtered = [...allUsers];
 
+    // Apply region filter
+    if (regionFilter !== "total") {
+      filtered = filtered.filter(
+        (u) => u.region?.toLowerCase() === regionFilter
+      );
+    }
+
+    // Apply text filter
     if (filterText.trim()) {
       const searchText = filterText.toLowerCase();
       filtered = filtered.filter((u) => {
@@ -173,6 +186,7 @@ export default function UsersPage() {
       });
     }
 
+    // Apply sorting
     if (sortConfig) {
       filtered.sort((a, b) => {
         let aValue: any;
@@ -211,8 +225,8 @@ export default function UsersPage() {
 
     setFilteredUsers(filtered);
     setTotalUsers(filtered.length);
-    setCurrentPage(1);
-  }, [allUsers, filterText, sortConfig]);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [allUsers, filterText, sortConfig, regionFilter]);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -235,7 +249,6 @@ export default function UsersPage() {
   /* ✅ Row Selection */
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      // selection by internal unique id (keeps original behaviour)
       setSelectedRows(paginatedUsers.map((u) => String(u.id)));
     } else {
       setSelectedRows([]);
@@ -375,6 +388,34 @@ export default function UsersPage() {
                       onChange={(e) => setFilterText(e.target.value)}
                       className="flex-1 min-w-[200px] max-w-[300px]"
                     />
+                    {/* Region Toggle */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant={
+                          regionFilter === "total" ? "default" : "outline"
+                        }
+                        onClick={() => setRegionFilter("total")}
+                        className="h-9"
+                      >
+                        Total
+                      </Button>
+                      <Button
+                        variant={
+                          regionFilter === "india" ? "default" : "outline"
+                        }
+                        onClick={() => setRegionFilter("india")}
+                        className="h-9"
+                      >
+                        India
+                      </Button>
+                      <Button
+                        variant={regionFilter === "usa" ? "default" : "outline"}
+                        onClick={() => setRegionFilter("usa")}
+                        className="h-9"
+                      >
+                        USA
+                      </Button>
+                    </div>
                     <Button variant="outline" size="sm" className="h-9">
                       <Plus className="h-4 w-4 mr-2" />
                       Status
@@ -473,7 +514,6 @@ export default function UsersPage() {
                                   />
                                 </TableCell>
                                 <TableCell className="px-4 py-3 font-medium text-sm">
-                                  {/* Display MDR ID (use fallback to id if mdr_id missing) */}
                                   {user.mdr_id ?? user.id}
                                 </TableCell>
                                 <TableCell className="px-4 py-3 text-sm">
@@ -508,9 +548,6 @@ export default function UsersPage() {
                                         <MoreVertical className="h-4 w-4 text-gray-400" />
                                       </button>
                                     </DropdownMenuTrigger>
-
-                                    {/* Custom dropdown styles to match provided screenshot.
-                                        Important: only the menu styles are adjusted here; functionality/dialogs unchanged. */}
                                     <DropdownMenuContent
                                       align="end"
                                       className="w-48 bg-white rounded-lg shadow-lg border py-1"
@@ -524,7 +561,6 @@ export default function UsersPage() {
                                         <RotateCcw className="h-4 w-4" />
                                         Reset Password
                                       </DropdownMenuItem>
-
                                       <DropdownMenuItem
                                         onClick={() => handleDeleteClick(user)}
                                         className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-red-600 data-[highlighted]:bg-[#0A0A40] data-[highlighted]:text-white"
@@ -532,9 +568,7 @@ export default function UsersPage() {
                                         <Trash2 className="h-4 w-4" />
                                         Delete
                                       </DropdownMenuItem>
-
                                       <DropdownMenuSeparator />
-
                                       <DropdownMenuItem
                                         onClick={(e) => e.stopPropagation()}
                                         className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer data-[highlighted]:bg-[#0A0A40] data-[highlighted]:text-white"
