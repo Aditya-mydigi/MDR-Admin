@@ -1,17 +1,9 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/header";
-import Loader from "@/components/loader";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -27,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AreaChart,
   Area,
@@ -40,281 +30,421 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import clsx from "clsx";
+import Sidebar from "@/components/Sidebar";
+import Header from "@/components/header";
+import Loader from "@/components/loader";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Plus,
   Filter,
   MoreVertical,
+  ArrowUpDown,
   ArrowLeft,
   ArrowRight,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
 
-/* ------------------- Helper Interfaces ------------------- */
-interface User {
-  id: string;
-  mdr_id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone_num: string | null;
-  gender: string | null;
-  blood_group: string | null;
-  created_at: string;
-  plan_id: string | null;
-  expiry_date: string | null;
-  user_plan_active: boolean;
-}
-
-/* ------------------- Utility Functions ------------------- */
-const formatDate = (dateStr: string) => {
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "-";
-  }
+// ---------- STATIC trend data (unchanged) ----------
+const staticTrends = {
+  activeUsers: [
+    { day: "Mon", value: 11000 },
+    { day: "Tue", value: 11200 },
+    { day: "Wed", value: 11300 },
+    { day: "Thu", value: 11500 },
+    { day: "Fri", value: 11800 },
+    { day: "Sat", value: 12000 },
+    { day: "Sun", value: 12450 },
+  ],
+  newSignups: [
+    { day: "Mon", value: 2200 },
+    { day: "Tue", value: 2180 },
+    { day: "Wed", value: 2150 },
+    { day: "Thu", value: 2140 },
+    { day: "Fri", value: 2130 },
+    { day: "Sat", value: 2140 },
+    { day: "Sun", value: 2145 },
+  ],
+  totalRecords: [
+    { day: "Mon", value: 8500 },
+    { day: "Tue", value: 8800 },
+    { day: "Wed", value: 9000 },
+    { day: "Thu", value: 9200 },
+    { day: "Fri", value: 9400 },
+    { day: "Sat", value: 9600 },
+    { day: "Sun", value: 9830 },
+  ],
+  revenue: [
+    { day: "Mon", value: 7.2 },
+    { day: "Tue", value: 7.4 },
+    { day: "Wed", value: 7.6 },
+    { day: "Thu", value: 7.8 },
+    { day: "Fri", value: 8.0 },
+    { day: "Sat", value: 8.1 },
+    { day: "Sun", value: 8.2 },
+  ],
 };
 
-const getDaysLeft = (expiryDate: string | null) => {
-  if (!expiryDate) return "-";
-  const today = new Date();
-  const exp = new Date(expiryDate);
-  const diff = Math.ceil(
-    (exp.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  return diff <= 0 ? 0 : diff;
+// ---------- INITIAL KPI data (values will be updated from API) ----------
+const initialKpiData = {
+  activeUsers: {
+    label: "Active Users (DAU)",
+    value: "--",
+    change: "+5.6%",
+    changeType: "positive",
+    trend: staticTrends.activeUsers,
+  },
+  newSignups: {
+    label: "New Signups",
+    value: "--",
+    change: "-2%",
+    changeType: "negative",
+    trend: staticTrends.newSignups,
+  },
+  totalRecords: {
+    label: "Total Records Created",
+    value: "--",
+    change: "+12%",
+    changeType: "positive",
+    trend: staticTrends.totalRecords,
+  },
+  revenue: {
+    label: "Revenue (MTD)",
+    value: "--",
+    change: "+9%",
+    changeType: "positive",
+    trend: staticTrends.revenue,
+  },
+  // static cards (unchanged)
+  appointments: {
+    label: "Appointments Today",
+    value: "320",
+    change: "+5.6%",
+    changeType: "positive",
+    trend: [
+      { day: "Mon", value: 280 },
+      { day: "Tue", value: 290 },
+      { day: "Wed", value: 300 },
+      { day: "Thu", value: 310 },
+      { day: "Fri", value: 315 },
+      { day: "Sat", value: 318 },
+      { day: "Sun", value: 320 },
+    ],
+  },
+  systemErrors: {
+    label: "System Errors",
+    value: "4",
+    change: "-67%",
+    changeType: "negative",
+    trend: [
+      { day: "Mon", value: 12 },
+      { day: "Tue", value: 10 },
+      { day: "Wed", value: 8 },
+      { day: "Thu", value: 6 },
+      { day: "Fri", value: 5 },
+      { day: "Sat", value: 4 },
+      { day: "Sun", value: 4 },
+    ],
+  },
 };
 
-// Mini 7-day trend for KPI cards
-const generate7DayTrend = (baseValue: number) =>
-  Array.from({ length: 7 }).map((_, i) => ({
-    day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i],
-    value: baseValue + Math.floor(Math.random() * 100 - 50),
-  }));
+// ---------- Static table data (unchanged) ----------
+const tableData = [
+  {
+    id: "7365936578",
+    username: "Dr.Saroj Gupta",
+    email: "test121@gmail.com",
+    phone: "+91 924767845",
+    date: "9/19/2025",
+    gender: "Female",
+    bloodGroup: "O+ve",
+    planBuy: "1 Year",
+    daysLeft: 30,
+    status: "Active",
+  },
+  {
+    id: "5223868576",
+    username: "Rahul Pundir",
+    email: "test121@gmail.com",
+    phone: "+91 924767845",
+    date: "9/19/2025",
+    gender: "Male",
+    bloodGroup: "B-ve",
+    planBuy: "1 Year",
+    daysLeft: 1,
+    status: "Active",
+  },
+  {
+    id: "5282564256",
+    username: "Manpreet Sin...",
+    email: "test121@gmail.com",
+    phone: "",
+    date: "9/19/2025",
+    gender: "Male",
+    bloodGroup: "AB+ve",
+    planBuy: "No Plan",
+    daysLeft: "-",
+    status: "Inactive",
+  },
+  {
+    id: "5582756287",
+    username: "Hemant",
+    email: "test121@gmail.com",
+    phone: "",
+    date: "9/19/2025",
+    gender: "Male",
+    bloodGroup: "AB+ve",
+    planBuy: "2 year",
+    daysLeft: "-",
+    status: "Inactive",
+  },
+];
 
-// Monthly 6-month trend for area chart
-const build6MonthTrend = (currentValue: number) => {
-  const months = Array.from({ length: 6 }).map((_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - (5 - i));
-    return d.toLocaleString("en-US", { month: "short" });
-  });
-  const base = Math.max(0, Math.round(currentValue));
-  return months.map((label, idx) => ({
-    month: label,
-    value: Math.round(base * (0.7 + idx * 0.05)),
-  }));
-};
+// ---------- Area chart (unchanged) ----------
+const areaChartData = [
+  { date: "Apr 15", visitors: 4500, prev: 4200 },
+  { date: "Apr 20", visitors: 5200, prev: 4800 },
+  { date: "Apr 25", visitors: 4800, prev: 4400 },
+  { date: "Apr 30", visitors: 5500, prev: 5100 },
+  { date: "May 5", visitors: 6000, prev: 5600 },
+  { date: "May 10", visitors: 5800, prev: 5400 },
+  { date: "May 15", visitors: 6500, prev: 6100 },
+  { date: "May 20", visitors: 7000, prev: 6600 },
+  { date: "May 25", visitors: 6800, prev: 6400 },
+  { date: "May 30", visitors: 7500, prev: 7100 },
+  { date: "Jun 5", visitors: 8000, prev: 7600 },
+  { date: "Jun 10", visitors: 7800, prev: 7400 },
+  { date: "Jun 15", visitors: 8500, prev: 8100 },
+  { date: "Jun 20", visitors: 9000, prev: 8600 },
+  { date: "Jun 25", visitors: 8800, prev: 8400 },
+  { date: "Jun 30", visitors: 9500, prev: 9100 },
+];
 
-/* ------------------- Dashboard Component ------------------- */
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [dashboardData, setDashboardData] = useState<any | null>(null);
-
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [loadingDashboard, setLoadingDashboard] = useState(true);
-  const [errorUsers, setErrorUsers] = useState<string | null>(null);
-  const [errorDashboard, setErrorDashboard] = useState<string | null>(null);
-
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(4);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  /* ------------------- Fetch Dashboard ------------------- */
+  // KPI state (we keep the entire object so trends/labels/changes remain unchanged)
+  const [kpiData, setKpiData] = useState(initialKpiData);
+
+  /* ✅ Load sidebar state from localStorage */
   useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const res = await fetch("/api/dashboard");
-        const json = await res.json();
-        if (!json.success) throw new Error(json.message || "Failed");
-        setDashboardData(json.stats);
-      } catch {
-        setErrorDashboard("Failed to load dashboard data");
-      } finally {
-        setLoadingDashboard(false);
-      }
+    const savedCollapsed = localStorage.getItem("sidebarCollapsed");
+    if (savedCollapsed !== null) {
+      setSidebarCollapsed(savedCollapsed === "true");
     }
-    loadDashboard();
+    setLoading(false);
   }, []);
 
-  /* ------------------- Fetch Users ------------------- */
-  const fetchUsers = async (page = 1) => {
-    try {
-      const q = new URLSearchParams();
-      q.set("page", String(page));
-      q.set("limit", String(pageSize));
-      if (searchTerm) q.set("search", searchTerm);
-      const res = await fetch(`/api/users?${q.toString()}`);
-      const json = await res.json();
-      if (!json.success) throw new Error("Failed to fetch users");
-      setUsers(json.users || []);
-      setTotalPages(json.totalPages || 1);
-      setTotalCount(json.total || 0);
-      setCurrentPage(page);
-    } catch {
-      setErrorUsers("Failed to fetch users");
-    } finally {
-      setLoadingUsers(false);
+  /* ✅ Save sidebar state to localStorage */
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString());
+  }, [sidebarCollapsed]);
+
+  /* ✅ Fetch dashboard stats and update the four dynamic cards:
+       - activeUsers <- stats.activeUsers
+       - newSignups <- stats.newSignupsThisMonth
+       - totalRecords <- stats.totalUsers (you selected Option A)
+       - revenue <- stats.revenue.thisMonth (MTD)
+  */
+  useEffect(() => {
+    let mounted = true;
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/dashboard");
+        if (!res.ok) throw new Error("Failed to fetch dashboard");
+        const payload = await res.json();
+        if (!mounted) return;
+
+        if (payload && payload.success && payload.stats) {
+          const s = payload.stats;
+
+          // Helper: format numbers with commas
+          const nf = (n: any) => {
+            if (n === null || n === undefined) return "--";
+            if (typeof n === "number") return n.toLocaleString();
+            return String(n);
+          };
+
+          // Format revenue: show currency with 2 decimals (you can tweak currency)
+          const formatCurrency = (n: any) => {
+            if (n === null || n === undefined) return "--";
+            if (typeof n !== "number") return String(n);
+            // display as plain number with grouping; you can swap currency if required
+            return `₹${n.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`;
+          };
+
+          setKpiData((prev) => ({
+            ...prev,
+            activeUsers: {
+              ...prev.activeUsers,
+              value: nf(s.activeUsers),
+              // keep existing change/trend
+            },
+            newSignups: {
+              ...prev.newSignups,
+              value: nf(s.newSignupsThisMonth),
+            },
+            totalRecords: {
+              ...prev.totalRecords,
+              // Option A: totalUsers used as Total Records Created
+              value: nf(s.totalUsers),
+            },
+            revenue: {
+              ...prev.revenue,
+              value:
+                // prefer month number if available; fallback to total if not available
+                s.revenue && typeof s.revenue.thisMonth === "number"
+                  ? formatCurrency(s.revenue.thisMonth)
+                  : s.revenue && typeof s.revenue.total === "number"
+                  ? formatCurrency(s.revenue.total)
+                  : "--",
+            },
+          }));
+        } else {
+          console.warn(
+            "Dashboard API returned no stats or success=false",
+            payload
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+      }
+    };
+
+    fetchStats();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(tableData.map((row) => row.id));
+    } else {
+      setSelectedRows([]);
     }
   };
 
-  useEffect(() => {
-    fetchUsers(currentPage);
-  }, [pageSize, searchTerm, currentPage]);
+  const handleSelectRow = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRows([...selectedRows, id]);
+    } else {
+      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
+    }
+  };
 
-  /* ------------------- Sidebar ------------------- */
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebarCollapsed");
-    if (saved) setSidebarCollapsed(saved === "true");
-  }, []);
-  useEffect(() => {
-    localStorage.setItem("sidebarCollapsed", String(sidebarCollapsed));
-  }, [sidebarCollapsed]);
+  if (loading) return <Loader />;
 
-  /* ------------------- Table Selection ------------------- */
-  const handleSelectAll = (checked: boolean) =>
-    setSelectedRows(checked ? users.map((u) => u.id) : []);
-  const handleSelectRow = (id: string, checked: boolean) =>
-    setSelectedRows((prev) =>
-      checked ? [...prev, id] : prev.filter((r) => r !== id)
-    );
+  // Helper: map changeType -> colors (Option A: negative -> yellow per your choice)
+  const colorFor = (key: string, changeType: string | undefined) => {
+    if (key === "systemErrors") return "#ef4444"; // red
+    if (changeType === "positive") return "#16a34a"; // green
+    // Option A: negative -> yellow like image
+    return "#f59e0b"; // yellow/orange
+  };
 
-  /* ------------------- KPI Cards ------------------- */
-  const kpiCards = useMemo(() => {
-    if (!dashboardData) return [];
-    return [
-      {
-        key: "activeUsers",
-        label: "Active Users (DAU)",
-        value: dashboardData.activeUsers ?? 0,
-        change: "+5.6%",
-        trend: generate7DayTrend(dashboardData.activeUsers / 7),
-      },
-      {
-        key: "newSignups",
-        label: "New Signups (This Month)",
-        value: dashboardData.newSignupsThisMonth ?? 0,
-        change: "+2.3%",
-        trend: generate7DayTrend(dashboardData.newSignupsThisMonth / 7),
-      },
-      {
-        key: "totalRecords",
-        label: "Total Records Created",
-        value: dashboardData.totalUsers ?? 0,
-        change: "+12%",
-        trend: generate7DayTrend(dashboardData.totalUsers / 7),
-      },
-      {
-        key: "revenue",
-        label: "Revenue (MTD)",
-        value: dashboardData.revenue?.thisMonth ?? 0,
-        change: "+9%",
-        trend: generate7DayTrend(dashboardData.revenue?.thisMonth / 1000),
-      },
-    ];
-  }, [dashboardData]);
-
-  /* ------------------- India vs USA Chart ------------------- */
-  const indiaUsaSeries = useMemo(() => {
-    if (!dashboardData?.breakdown) return [];
-    const india = build6MonthTrend(dashboardData.breakdown.india?.active || 0);
-    const usa = build6MonthTrend(dashboardData.breakdown.usa?.active || 0);
-    return india.map((m, i) => ({
-      month: m.month,
-      india: m.value,
-      usa: usa[i]?.value ?? 0,
-    }));
-  }, [dashboardData]);
-
-  // ✅ Range Selector
-  const [selectedRange, setSelectedRange] = useState("3months");
-  const displayedSeries = useMemo(() => {
-    if (!indiaUsaSeries.length) return [];
-    const totalMonths =
-      selectedRange === "3months"
-        ? 3
-        : selectedRange === "6months"
-          ? 6
-          : 12;
-    return Array.from({ length: totalMonths }).map((_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - (totalMonths - 1 - i));
-      const month = d.toLocaleString("en-US", { month: "short" });
-      const indiaVal =
-        indiaUsaSeries[i % indiaUsaSeries.length]?.india +
-        Math.floor(Math.random() * 100 - 50);
-      const usaVal =
-        indiaUsaSeries[i % indiaUsaSeries.length]?.usa +
-        Math.floor(Math.random() * 100 - 50);
-      return { month, india: indiaVal, usa: usaVal };
-    });
-  }, [indiaUsaSeries, selectedRange]);
-
-  /* ------------------- Loading / Error ------------------- */
-  if (loadingDashboard || loadingUsers) return <Loader />;
-  if (errorDashboard || errorUsers)
-    return (
-      <div className="flex justify-center items-center h-screen text-red-500 font-medium">
-        {errorDashboard || errorUsers}
-      </div>
-    );
-
-  /* ------------------- Render ------------------- */
   return (
-    <div className={clsx("min-h-screen bg-white flex")}>
+    <div
+      className={clsx(
+        "min-h-screen bg-white flex",
+        sidebarOpen && "overflow-hidden"
+      )}
+    >
       <Sidebar
         sidebarOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onCloseMobile={() => setSidebarOpen(false)}
       />
-
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-white">
         <Header
           title="Dashboard"
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           sidebarCollapsed={sidebarCollapsed}
         />
-
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {kpiCards.map((card) => (
-              <Card key={card.key} className="border border-gray-200 shadow-sm">
-                <CardContent className="p-5">
-                  <p className="text-sm text-gray-600 font-medium mb-2">
-                    {card.label}
-                  </p>
-                  <div className="flex justify-between items-end mb-3">
-                    <p className="text-3xl font-bold text-gray-900">
-                      {card.key === "revenue"
-                        ? `₹${card.value.toLocaleString()}`
-                        : card.value.toLocaleString()}
+        <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+          {/* Six KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Object.entries(kpiData).map(([key, data]) => (
+              <Card
+                key={key}
+                className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                // match image: larger radius and lighter border/shadow
+                style={{ borderRadius: 10 }}
+              >
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="text-sm text-gray-600 font-medium">
+                      {data.label}
                     </p>
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full text-green-600 bg-green-50">
-                      {card.change}
+                  </div>
+                  <div className="flex justify-between items-end mb-3">
+                    <p
+                      className={clsx(
+                        "text-3xl font-bold",
+                        typeof data.value === "string" &&
+                          /^\d/.test(String(data.value))
+                          ? ""
+                          : "text-gray-900"
+                      )}
+                    >
+                      {/* For revenue we expect already formatted value like ₹x.xx */}
+                      {data.value}
+                    </p>
+                    <span
+                      className={clsx(
+                        "text-xs font-semibold px-2.5 py-1 rounded-full",
+                        data.changeType === "positive"
+                          ? "text-green-600 bg-green-50"
+                          : "text-yellow-600 bg-yellow-50"
+                      )}
+                    >
+                      {data.change} from last month
                     </span>
                   </div>
-                  <div className="h-[50px] -mx-2">
+
+                  {/* mini line chart that matches the image */}
+                  <div className="h-[55px] -mx-2 mt-2">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={card.trend}>
+                      <LineChart
+                        data={data.trend}
+                        margin={{ top: 5, right: 6, left: 6, bottom: 5 }}
+                      >
+                        {/* no axes visible, no grid */}
+                        <XAxis dataKey="day" hide />
+                        <YAxis hide domain={["dataMin", "dataMax"]} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "1px solid #e5e7eb",
+                            borderRadius: "6px",
+                            padding: "8px 12px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.08)",
+                          }}
+                        />
                         <Line
                           type="monotone"
                           dataKey="value"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={false}
+                          stroke={colorFor(key, data.changeType)}
+                          strokeWidth={2.5}
+                          dot={{
+                            r: 3.2,
+                            strokeWidth: 2,
+                            stroke: colorFor(key, data.changeType),
+                            fill: "#ffffff",
+                          }}
+                          activeDot={{ r: 4 }}
                         />
-                        <Tooltip />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -323,255 +453,390 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* User Table */}
+          {/* Data Table Section */}
           <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-4 border-b">
               <div className="flex flex-wrap items-center gap-3">
                 <Input
-                  placeholder="Filter users..."
+                  placeholder="Filter tasks..."
                   className="flex-1 min-w-[200px] max-w-[300px]"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 <Button variant="outline" size="sm" className="h-9">
-                  <Filter className="h-4 w-4 mr-2" /> View
+                  <Plus className="h-4 w-4 mr-2" />
+                  Status
+                </Button>
+                <Button variant="outline" size="sm" className="h-9">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Priority
+                </Button>
+                <Button variant="outline" size="sm" className="h-9">
+                  <Filter className="h-4 w-4 mr-2" />
+                  View
                 </Button>
               </div>
             </CardHeader>
-
             <CardContent className="p-0">
-              <div className="overflow-x-auto" style={{ maxHeight: "280px" }}>
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="w-12 px-4 font-bold">
+                      <TableHead className="w-12 px-4">
                         <Checkbox
                           checked={
-                            selectedRows.length === users.length &&
-                            users.length > 0
+                            selectedRows.length === tableData.length &&
+                            tableData.length > 0
                           }
                           onCheckedChange={handleSelectAll}
                         />
                       </TableHead>
-                      {[
-                        "ID",
-                        "Username",
-                        "Email/Phone No.",
-                        "Date",
-                        "Gender",
-                        "Blood Group",
-                        "Plan Buy",
-                        "Days Left",
-                        "Status",
-                      ].map((head) => (
-                        <TableHead
-                          key={head}
-                          className="px-4 py-3 text-xs font-bold text-gray-700"
-                        >
-                          {head}
-                        </TableHead>
-                      ))}
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          ID
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Username
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Email/Phone No.
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Date
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Gender
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Blood Group
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Plan Buy
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Days Left
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
+                      <TableHead className="px-4 py-3">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
+                          Status
+                          <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                        </div>
+                      </TableHead>
                       <TableHead className="w-12 px-4"></TableHead>
                     </TableRow>
                   </TableHeader>
-
                   <TableBody>
-                    {users.map((user) => {
-                      const daysLeft = getDaysLeft(user.expiry_date);
-                      return (
-                        <TableRow key={user.id} className="hover:bg-gray-50">
-                          <TableCell className="px-4 py-3">
-                            <Checkbox
-                              checked={selectedRows.includes(user.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectRow(user.id, checked as boolean)
-                              }
-                            />
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm font-medium">
-                            {user.mdr_id}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {user.first_name} {user.last_name}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            <div>
-                              <div>{user.email}</div>
-                              {user.phone_num && (
-                                <div className="text-xs text-gray-500">
-                                  {user.phone_num}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {formatDate(user.created_at)}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {user.gender ?? "-"}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {user.blood_group ?? "-"}
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-sm">
-                            {user.plan_id ?? "No Plan"}
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            {daysLeft === "-" ? (
-                              <span className="text-gray-400 text-sm">-</span>
-                            ) : (
-                              <span
-                                className={clsx(
-                                  "px-2 py-1 rounded text-xs font-medium",
-                                  daysLeft <= 1
-                                    ? "bg-red-100 text-red-700"
-                                    : daysLeft <= 10
-                                      ? "bg-yellow-100 text-yellow-700"
-                                      : "bg-green-100 text-green-700"
-                                )}
-                              >
-                                {daysLeft} {daysLeft === 1 ? "Day" : "Days"}
-                              </span>
+                    {tableData.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="hover:bg-gray-50 border-b"
+                      >
+                        <TableCell className="px-4 py-3">
+                          <Checkbox
+                            checked={selectedRows.includes(row.id)}
+                            onCheckedChange={(checked) =>
+                              handleSelectRow(row.id, checked as boolean)
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="px-4 py-3 font-medium text-sm">
+                          {row.id}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm">
+                          {row.username}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="text-sm">
+                            <div>{row.email}</div>
+                            {row.phone && (
+                              <div className="text-gray-500 text-xs">
+                                {row.phone}
+                              </div>
                             )}
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm">
+                          {row.date}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm">
+                          {row.gender}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm">
+                          {row.bloodGroup}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm">
+                          {row.planBuy}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          {row.daysLeft === "-" ? (
+                            <span className="text-gray-400 text-sm">-</span>
+                          ) : (
                             <span
                               className={clsx(
                                 "px-2 py-1 rounded text-xs font-medium",
-                                user.user_plan_active
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
+                                typeof row.daysLeft === "number" &&
+                                  row.daysLeft <= 1
+                                  ? "bg-red-100 text-red-700"
+                                  : typeof row.daysLeft === "number" &&
+                                    row.daysLeft <= 10
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-green-100 text-green-700"
                               )}
                             >
-                              {user.user_plan_active ? "Active" : "Inactive"}
+                              {row.daysLeft}{" "}
+                              {typeof row.daysLeft === "number" &&
+                              row.daysLeft === 1
+                                ? "Day"
+                                : "Days"}
                             </span>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <span
+                            className={clsx(
+                              "px-2 py-1 rounded text-xs font-medium",
+                              row.status === "Active"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-700"
+                            )}
+                          >
+                            {row.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
                             <MoreVertical className="h-4 w-4 text-gray-400" />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Pagination (client-side only) */}
-              <div className="flex items-center justify-between px-6 py-3 border-t bg-gray-50">
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                 <div className="text-sm text-gray-600">
-                  {selectedRows.length} of {totalCount} selected.
+                  {selectedRows.length} of {tableData.length} row(s) selected.
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(value) => {
+                      setPageSize(Number(value));
+                      setCurrentPage(1);
+                    }}
                   >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="px-2 text-sm text-gray-700">
-                    Page {currentPage} of {totalPages}
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">Rows per page 10</SelectItem>
+                      <SelectItem value="20">Rows per page 20</SelectItem>
+                      <SelectItem value="50">Rows per page 50</SelectItem>
+                      <SelectItem value="100">Rows per page 100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="text-sm text-gray-600">
+                    Page {currentPage} of{" "}
+                    {Math.ceil(tableData.length / pageSize)}
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() =>
+                        setCurrentPage((p) =>
+                          Math.min(
+                            Math.ceil(tableData.length / pageSize),
+                            p + 1
+                          )
+                        )
+                      }
+                      disabled={
+                        currentPage === Math.ceil(tableData.length / pageSize)
+                      }
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() =>
+                        setCurrentPage(Math.ceil(tableData.length / pageSize))
+                      }
+                      disabled={
+                        currentPage === Math.ceil(tableData.length / pageSize)
+                      }
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Chart Section */}
-          <div className="mt-6 w-full flex justify-start">
-            <div className="w-full lg:w-3/4">
-              <Card className="border border-gray-200 shadow-sm h-full w-full">
-                <CardHeader className="pb-4 border-b flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      Area Chart - Interactive
-                    </CardTitle>
-                    <p className="text-sm text-gray-500">
-                      Showing total visitors for the selected duration
-                    </p>
-                  </div>
-                  <Select value={selectedRange} onValueChange={(value) => setSelectedRange(value)}>
-                    <SelectTrigger className="w-[140px] h-8 text-sm">
-                      <SelectValue placeholder="Last 3 months" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3months">Last 3 months</SelectItem>
-                      <SelectItem value="6months">Last 6 months</SelectItem>
-                      <SelectItem value="12months">Last 12 months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardHeader>
-
-                <CardContent className="pt-6 pb-2">
-                  <div
-                    className="relative w-full"
-                    style={{ aspectRatio: "3 / 1", maxHeight: "230px" }}
+          {/* Area Chart Section */}
+          <Card className="border border-gray-200 shadow-sm">
+            <CardHeader className="pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-semibold text-gray-900">
+                    Area Chart - Interactive
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Showing total visitors for the last 3 months
+                  </p>
+                </div>
+                <Select defaultValue="3months">
+                  <SelectTrigger className="w-[160px] h-9">
+                    <SelectValue placeholder="Last 3 months" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1month">Last 1 month</SelectItem>
+                    <SelectItem value="3months">Last 3 months</SelectItem>
+                    <SelectItem value="6months">Last 6 months</SelectItem>
+                    <SelectItem value="1year">Last 1 year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={areaChartData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                   >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={displayedSeries}
-                        margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                    <defs>
+                      <linearGradient
+                        id="colorVisitors"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
                       >
-                        <defs>
-                          <linearGradient id="colorIndia" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.45} />
-                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.05} />
-                          </linearGradient>
-                          <linearGradient id="colorUsa" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.45} />
-                            <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                        <XAxis dataKey="month" stroke="#9ca3af" tickLine={false} axisLine={false} tickMargin={10} />
-                        <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} tickMargin={10} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "white",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: "6px",
-                            padding: "8px 12px",
-                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                          }}
+                        <stop
+                          offset="5%"
+                          stopColor="#06b6d4"
+                          stopOpacity={0.4}
                         />
-                        <Area type="monotone" dataKey="india" stroke="#06b6d4" strokeWidth={2.2} fill="url(#colorIndia)" animationDuration={800} />
-                        <Area type="monotone" dataKey="usa" stroke="#f97316" strokeWidth={2.2} fill="url(#colorUsa)" animationDuration={800} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                        <stop
+                          offset="95%"
+                          stopColor="#06b6d4"
+                          stopOpacity={0.05}
+                        />
+                      </linearGradient>
+                      <linearGradient
+                        id="colorPrev"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#f97316"
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#f97316"
+                          stopOpacity={0.05}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e5e7eb"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#9ca3af"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                    />
+                    <YAxis
+                      stroke="#9ca3af"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={10}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "6px",
+                        padding: "8px 12px",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="visitors"
+                      stroke="#06b6d4"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorVisitors)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="prev"
+                      stroke="#f97316"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#colorPrev)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
