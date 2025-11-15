@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -11,10 +11,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Search,
+  ArrowUpDown,
+} from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 import Loader from "@/components/loader";
 import clsx from "clsx";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+const blueAccent = "bg-[#00BFFF] text-white hover:bg-[#0090cc]";
+const blueOutline =
+  "border-[#00BFFF] text-[#00BFFF] hover:bg-[#00BFFF] hover:text-white";
 
 // -----------------------------
 // Types
@@ -27,10 +54,27 @@ interface Subscription {
   datetime: string | null;
 }
 
-interface ApiResponse {
+interface Transaction {
+  plan_id: string | null;
+  final_amount: any;
+  datetime: string;
+}
+
+interface GroupedUser {
+  name: string;
+  email: string;
+  transactions: Transaction[];
+}
+
+interface ApiResponse<T> {
   success: boolean;
-  data?: Subscription[];
+  data?: T;
   error?: string;
+}
+
+interface SortConfig {
+  key: string;
+  direction: "asc" | "desc";
 }
 
 // -----------------------------
@@ -42,8 +86,25 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"india" | "usa">("india");
+  const [activeMainTab, setActiveMainTab] = useState<
+    "subscriptions" | "transactions"
+  >("subscriptions");
+  const [activeRegionTab, setActiveRegionTab] = useState<"india" | "usa">(
+    "india"
+  );
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [transactions, setTransactions] = useState<GroupedUser[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "datetime",
+    direction: "desc",
+  });
+  const [filters, setFilters] = useState({
+    plan_id: "",
+    minAmount: "",
+    maxAmount: "",
+  });
 
   // Load sidebar collapse state
   useEffect(() => {
@@ -61,37 +122,66 @@ export default function BillingPage() {
 
   // Fetch data on tab switch
   useEffect(() => {
-    const fetchSubscriptions = async () => {
-      setTabLoading(true);
-      setError(null);
+    if (activeMainTab === "subscriptions") {
+      const fetchSubscriptions = async () => {
+        setTabLoading(true);
+        setError(null);
 
-      try {
-        const endpoint =
-          activeTab === "india"
-            ? "/api/billing/subscription/india"
-            : "/api/billing/subscription/usa";
+        try {
+          const endpoint =
+            activeRegionTab === "india"
+              ? "/api/billing/subscription/india"
+              : "/api/billing/subscription/usa";
 
-        const response = await fetch(endpoint);
-        const result: ApiResponse = await response.json();
+          const response = await fetch(endpoint);
+          const result: ApiResponse<Subscription[]> = await response.json();
 
-        if (result.success && result.data) {
-          setSubscriptions(result.data);
-        } else {
-          setError(result.error || "Failed to fetch subscriptions");
+          if (result.success && result.data) {
+            setSubscriptions(result.data);
+          } else {
+            setError(result.error || "Failed to fetch subscriptions");
+            setSubscriptions([]);
+          }
+        } catch (err) {
+          setError("Network error occurred");
           setSubscriptions([]);
+        } finally {
+          setTabLoading(false);
         }
-      } catch (err) {
-        setError("Network error occurred");
-        setSubscriptions([]);
-      } finally {
-        setTabLoading(false);
-      }
-    };
+      };
 
-    fetchSubscriptions();
-  }, [activeTab]);
+      fetchSubscriptions();
+    } else {
+      const fetchTransactions = async () => {
+        setTabLoading(true);
+        setError(null);
 
-  if (loading) return <Loader />;
+        try {
+          const endpoint =
+            activeRegionTab === "india"
+              ? "/api/billing/transactions/india"
+              : "/api/billing/transactions/usa";
+
+          const response = await fetch(endpoint);
+          const result = await response.json();
+
+          if (Array.isArray(result)) {
+            setTransactions(result);
+          } else {
+            setError("Failed to fetch transactions");
+            setTransactions([]);
+          }
+        } catch (err) {
+          setError("Network error occurred");
+          setTransactions([]);
+        } finally {
+          setTabLoading(false);
+        }
+      };
+
+      fetchTransactions();
+    }
+  }, [activeMainTab, activeRegionTab]);
 
   // -----------------------------
   // Helpers
@@ -125,16 +215,224 @@ export default function BillingPage() {
       : `$${numericAmount.toFixed(2)}`;
   };
 
+  const toggleRow = (email: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(email)) {
+      newExpanded.delete(email);
+    } else {
+      newExpanded.add(email);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const handleSort = (key: string) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
+    }));
+  };
+
+  // Filter and sort subscriptions
+  const filteredAndSortedSubscriptions = useMemo(() => {
+    let filtered = [...subscriptions];
+
+    // Apply search
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (sub) =>
+          sub.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          sub.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          sub.plan_id?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply filters
+    if (filters.plan_id) {
+      filtered = filtered.filter((sub) => sub.plan_id === filters.plan_id);
+    }
+    if (filters.minAmount) {
+      filtered = filtered.filter(
+        (sub) =>
+          parseFloat(sub.final_amount as string) >=
+          parseFloat(filters.minAmount)
+      );
+    }
+    if (filters.maxAmount) {
+      filtered = filtered.filter(
+        (sub) =>
+          parseFloat(sub.final_amount as string) <=
+          parseFloat(filters.maxAmount)
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof Subscription];
+      const bValue = b[sortConfig.key as keyof Subscription];
+
+      if (aValue === null || bValue === null) return 0;
+      if (sortConfig.key === "final_amount") {
+        const aNum = parseFloat(aValue as string);
+        const bNum = parseFloat(bValue as string);
+        return sortConfig.direction === "asc" ? aNum - bNum : bNum - aNum;
+      }
+      if (sortConfig.key === "datetime") {
+        const aDate = new Date(aValue as string);
+        const bDate = new Date(bValue as string);
+        return sortConfig.direction === "asc"
+          ? aDate.getTime() - bDate.getTime()
+          : bDate.getTime() - aDate.getTime();
+      }
+      return sortConfig.direction === "asc"
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+
+    return filtered;
+  }, [subscriptions, searchTerm, sortConfig, filters]);
+
+  // Filter and sort transactions
+  const filteredAndSortedTransactions = useMemo(() => {
+    let filtered = [...transactions];
+
+    // Apply search
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.transactions.some((txn) =>
+            txn.plan_id?.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+      );
+    }
+
+    // Apply filters
+    if (filters.plan_id) {
+      filtered = filtered.filter((user) =>
+        user.transactions.some((txn) => txn.plan_id === filters.plan_id)
+      );
+    }
+    if (filters.minAmount) {
+      filtered = filtered.filter((user) =>
+        user.transactions.some(
+          (txn) => parseFloat(txn.final_amount) >= parseFloat(filters.minAmount)
+        )
+      );
+    }
+    if (filters.maxAmount) {
+      filtered = filtered.filter((user) =>
+        user.transactions.some(
+          (txn) => parseFloat(txn.final_amount) <= parseFloat(filters.maxAmount)
+        )
+      );
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortConfig.key === "transactions") {
+        const aCount = a.transactions.length;
+        const bCount = b.transactions.length;
+        return sortConfig.direction === "asc"
+          ? aCount - bCount
+          : bCount - aCount;
+      }
+      const aValue = a[sortConfig.key as keyof GroupedUser];
+      const bValue = b[sortConfig.key as keyof GroupedUser];
+      return sortConfig.direction === "asc"
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+
+    return filtered;
+  }, [transactions, searchTerm, sortConfig, filters]);
+
+  // Get unique plan IDs for filter
+  const uniquePlanIds = useMemo(() => {
+    const plans = new Set<string>();
+    subscriptions.forEach((sub) => sub.plan_id && plans.add(sub.plan_id));
+    transactions.forEach((user) =>
+      user.transactions.forEach((txn) => txn.plan_id && plans.add(txn.plan_id))
+    );
+    return Array.from(plans);
+  }, [subscriptions, transactions]);
+
   // -----------------------------
-  // Table Renderer
+  // Table Renderers
   // -----------------------------
   const renderSubscriptionTable = (
     data: Subscription[],
     region: "India" | "USA"
   ) => (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{region} Subscriptions</CardTitle>
+        <div className="flex items-center gap-4">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search subscriptions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80 p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Plan ID</label>
+                  <Select
+                    value={filters.plan_id}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, plan_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Plans</SelectItem>
+                      {uniquePlanIds.map((plan) => (
+                        <SelectItem key={plan} value={plan}>
+                          {plan}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Min Amount</label>
+                  <Input
+                    type="number"
+                    value={filters.minAmount}
+                    onChange={(e) =>
+                      setFilters({ ...filters, minAmount: e.target.value })
+                    }
+                    placeholder="Min amount"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Max Amount</label>
+                  <Input
+                    type="number"
+                    value={filters.maxAmount}
+                    onChange={(e) =>
+                      setFilters({ ...filters, maxAmount: e.target.value })
+                    }
+                    placeholder="Max amount"
+                  />
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
 
       <CardContent>
@@ -148,11 +446,56 @@ export default function BillingPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Username</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Plan ID</TableHead>
-                <TableHead>Payment Date</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("username")}
+                    className="flex items-center gap-1"
+                  >
+                    Username
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("email")}
+                    className="flex items-center gap-1"
+                  >
+                    Email
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("plan_id")}
+                    className="flex items-center gap-1"
+                  >
+                    Plan ID
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("datetime")}
+                    className="flex items-center gap-1"
+                  >
+                    Payment Date
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("final_amount")}
+                    className="flex items-center gap-1"
+                  >
+                    Amount
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
               </TableRow>
             </TableHeader>
 
@@ -161,12 +504,231 @@ export default function BillingPage() {
                 <TableRow key={idx}>
                   <TableCell>{row.username || "—"}</TableCell>
                   <TableCell>{row.email || "—"}</TableCell>
-                  <TableCell>{row.plan_id || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{row.plan_id || "—"}</Badge>
+                  </TableCell>
                   <TableCell>{formatDate(row.datetime)}</TableCell>
                   <TableCell>
                     {formatAmount(row.final_amount, region)}
                   </TableCell>
                 </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderTransactionTable = (
+    data: GroupedUser[],
+    region: "India" | "USA"
+  ) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{region} Transactions</CardTitle>
+        <div className="flex items-center gap-4">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-80 p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Plan ID</label>
+                  <Select
+                    value={filters.plan_id}
+                    onValueChange={(value) =>
+                      setFilters({ ...filters, plan_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Plans</SelectItem>
+                      {uniquePlanIds.map((plan) => (
+                        <SelectItem key={plan} value={plan}>
+                          {plan}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Min Amount</label>
+                  <Input
+                    type="number"
+                    value={filters.minAmount}
+                    onChange={(e) =>
+                      setFilters({ ...filters, minAmount: e.target.value })
+                    }
+                    placeholder="Min amount"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Max Amount</label>
+                  <Input
+                    type="number"
+                    value={filters.maxAmount}
+                    onChange={(e) =>
+                      setFilters({ ...filters, maxAmount: e.target.value })
+                    }
+                    placeholder="Max amount"
+                  />
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {tabLoading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : error ? (
+          <div className="text-center py-4 text-destructive">{error}</div>
+        ) : data.length === 0 ? (
+          <div className="text-center py-4">No transactions found</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead></TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("name")}
+                    className="flex items-center gap-1"
+                  >
+                    Name
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("email")}
+                    className="flex items-center gap-1"
+                  >
+                    Email
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+                <TableHead>
+                  <Button
+                    variant="ghost"
+                    onClick={() => handleSort("transactions")}
+                    className="flex items-center gap-1"
+                  >
+                    Transactions
+                    <ArrowUpDown className="h-4 w-4" />
+                  </Button>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {data.map((user) => (
+                <React.Fragment key={user.email}>
+                  <TableRow>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleRow(user.email)}
+                      >
+                        {expandedRows.has(user.email) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell>{user.name || "—"}</TableCell>
+                    <TableCell>{user.email || "—"}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            View Transactions ({user.transactions.length})
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-64">
+                          {user.transactions.map((txn, idx) => (
+                            <DropdownMenuItem
+                              key={idx}
+                              className="flex flex-col items-start p-3 rounded-lg bg-blue-50 mb-2 border border-blue-100 shadow-sm text-sm"
+                            >
+                              <div className="w-full flex justify-between font-medium">
+                                <span>Plan ID:</span>
+                                <span className="text-[#00BFFF]">
+                                  {txn.plan_id || "—"}
+                                </span>
+                              </div>
+                              <div className="w-full flex justify-between">
+                                <span>Amount:</span>
+                                <span>
+                                  {formatAmount(txn.final_amount, region)}
+                                </span>
+                              </div>
+                              <div className="w-full flex justify-between">
+                                <span>Date:</span>
+                                <span>{formatDate(txn.datetime)}</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                  {expandedRows.has(user.email) && (
+                    <TableRow>
+                      <TableCell colSpan={4}>
+                        <div className="pl-8">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Plan ID</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Date</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {user.transactions.map((txn, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell>
+                                    <Badge variant="outline">
+                                      {txn.plan_id || "—"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {formatAmount(txn.final_amount, region)}
+                                  </TableCell>
+                                  <TableCell>
+                                    {formatDate(txn.datetime)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
@@ -201,23 +763,85 @@ export default function BillingPage() {
 
         <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/40">
           <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as "india" | "usa")}
+            value={activeMainTab}
+            onValueChange={(v) =>
+              setActiveMainTab(v as "subscriptions" | "transactions")
+            }
+            className="space-y-6"
           >
-            {/* Tabs */}
-            <TabsList>
-              <TabsTrigger value="india">India</TabsTrigger>
-              <TabsTrigger value="usa">USA</TabsTrigger>
+            <TabsList className="grid w-1/2 mx-auto grid-cols-2 rounded-xl bg-blue-50 p-1 shadow-sm">
+              <TabsTrigger
+                value="subscriptions"
+                className="text-sm py-1 px-3 data-[state=active]:bg-[#00BFFF] data-[state=active]:text-white rounded-lg transition-all"
+              >
+                Subscriptions
+              </TabsTrigger>
+              <TabsTrigger
+                value="transactions"
+                className="text-sm py-1 px-3 data-[state=active]:bg-[#00BFFF] data-[state=active]:text-white rounded-lg transition-all"
+              >
+                Transactions
+              </TabsTrigger>
             </TabsList>
 
-            {/* India */}
-            <TabsContent value="india" className="space-y-6">
-              {renderSubscriptionTable(subscriptions, "India")}
+            <TabsContent value="subscriptions">
+              <Tabs
+                value={activeRegionTab}
+                onValueChange={(v) => setActiveRegionTab(v as "india" | "usa")}
+              >
+                <TabsList className="rounded-2xl bg-muted p-1 flex w-fit mx-auto shadow-sm">
+                  <TabsTrigger
+                    value="india"
+                    className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 py-2 transition-all"
+                  >
+                    India
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="usa"
+                    className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 py-2 transition-all"
+                  >
+                    USA
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="india" className="space-y-6">
+                  {renderSubscriptionTable(
+                    filteredAndSortedSubscriptions,
+                    "India"
+                  )}
+                </TabsContent>
+
+                <TabsContent value="usa" className="space-y-6">
+                  {renderSubscriptionTable(
+                    filteredAndSortedSubscriptions,
+                    "USA"
+                  )}
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
-            {/* USA */}
-            <TabsContent value="usa" className="space-y-6">
-              {renderSubscriptionTable(subscriptions, "USA")}
+            <TabsContent value="transactions">
+              <Tabs
+                value={activeRegionTab}
+                onValueChange={(v) => setActiveRegionTab(v as "india" | "usa")}
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="india">India</TabsTrigger>
+                  <TabsTrigger value="usa">USA</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="india" className="space-y-6">
+                  {renderTransactionTable(
+                    filteredAndSortedTransactions,
+                    "India"
+                  )}
+                </TabsContent>
+
+                <TabsContent value="usa" className="space-y-6">
+                  {renderTransactionTable(filteredAndSortedTransactions, "USA")}
+                </TabsContent>
+              </Tabs>
             </TabsContent>
           </Tabs>
         </main>
