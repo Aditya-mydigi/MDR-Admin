@@ -826,9 +826,20 @@ export default function BillingPage() {
                 value={activeRegionTab}
                 onValueChange={(v) => setActiveRegionTab(v as "india" | "usa")}
               >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="india">India</TabsTrigger>
-                  <TabsTrigger value="usa">USA</TabsTrigger>
+                <TabsList className="rounded-2xl bg-muted p-1 flex w-fit mx-auto shadow-sm">
+                  <TabsTrigger
+                    value="india"
+                    className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 py-2 transition-all"
+                  >
+                    India
+                  </TabsTrigger>
+
+                  <TabsTrigger
+                    value="usa"
+                    className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 py-2 transition-all"
+                  >
+                    USA
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="india" className="space-y-6">
