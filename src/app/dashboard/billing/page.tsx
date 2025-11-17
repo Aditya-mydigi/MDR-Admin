@@ -102,8 +102,7 @@ export default function BillingPage() {
   });
   const [filters, setFilters] = useState({
     plan_id: "",
-    minAmount: "",
-    maxAmount: "",
+    date: "",
   });
 
   // Load sidebar collapse state
@@ -186,6 +185,14 @@ export default function BillingPage() {
   // -----------------------------
   // Helpers
   // -----------------------------
+  const resetFilters = () => {
+    setFilters({
+      plan_id: "",
+      date: "",
+    });
+    setSearchTerm("");
+  };
+
   const formatDate = (date: string | null) => {
     if (!date) return "—";
     return new Date(date).toLocaleDateString("en-US", {
@@ -247,22 +254,18 @@ export default function BillingPage() {
     }
 
     // Apply filters
-    if (filters.plan_id) {
+    if (filters.plan_id && filters.plan_id !== "all") {
       filtered = filtered.filter((sub) => sub.plan_id === filters.plan_id);
     }
-    if (filters.minAmount) {
-      filtered = filtered.filter(
-        (sub) =>
-          parseFloat(sub.final_amount as string) >=
-          parseFloat(filters.minAmount)
-      );
-    }
-    if (filters.maxAmount) {
-      filtered = filtered.filter(
-        (sub) =>
-          parseFloat(sub.final_amount as string) <=
-          parseFloat(filters.maxAmount)
-      );
+    if (filters.date) {
+      filtered = filtered.filter((sub) => {
+        if (!sub.datetime) return false;
+
+        const itemDate = new Date(sub.datetime).toDateString();
+        const filterDate = new Date(filters.date).toDateString();
+
+        return itemDate === filterDate; // exact match
+      });
     }
 
     // Apply sorting
@@ -308,23 +311,18 @@ export default function BillingPage() {
     }
 
     // Apply filters
-    if (filters.plan_id) {
+    if (filters.plan_id && filters.plan_id !== "all") {
       filtered = filtered.filter((user) =>
         user.transactions.some((txn) => txn.plan_id === filters.plan_id)
       );
     }
-    if (filters.minAmount) {
+    if (filters.date) {
       filtered = filtered.filter((user) =>
-        user.transactions.some(
-          (txn) => parseFloat(txn.final_amount) >= parseFloat(filters.minAmount)
-        )
-      );
-    }
-    if (filters.maxAmount) {
-      filtered = filtered.filter((user) =>
-        user.transactions.some(
-          (txn) => parseFloat(txn.final_amount) <= parseFloat(filters.maxAmount)
-        )
+        user.transactions.some((txn) => {
+          const itemDate = new Date(txn.datetime).toDateString();
+          const filterDate = new Date(filters.date).toDateString();
+          return itemDate === filterDate; // exact match
+        })
       );
     }
 
@@ -398,7 +396,7 @@ export default function BillingPage() {
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Plans</SelectItem>
+                      <SelectItem value="all">All Plans</SelectItem>
                       {uniquePlanIds.map((plan) => (
                         <SelectItem key={plan} value={plan}>
                           {plan}
@@ -408,27 +406,22 @@ export default function BillingPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Min Amount</label>
+                  <label className="text-sm font-medium">Date</label>
                   <Input
-                    type="number"
-                    value={filters.minAmount}
+                    type="date"
+                    value={filters.date}
                     onChange={(e) =>
-                      setFilters({ ...filters, minAmount: e.target.value })
+                      setFilters({ ...filters, date: e.target.value })
                     }
-                    placeholder="Min amount"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Max Amount</label>
-                  <Input
-                    type="number"
-                    value={filters.maxAmount}
-                    onChange={(e) =>
-                      setFilters({ ...filters, maxAmount: e.target.value })
-                    }
-                    placeholder="Max amount"
-                  />
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={resetFilters}
+                >
+                  Reset Filters
+                </Button>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -558,7 +551,7 @@ export default function BillingPage() {
                       <SelectValue placeholder="Select plan" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Plans</SelectItem>
+                      <SelectItem value="all">All Plans</SelectItem>
                       {uniquePlanIds.map((plan) => (
                         <SelectItem key={plan} value={plan}>
                           {plan}
@@ -568,27 +561,22 @@ export default function BillingPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Min Amount</label>
+                  <label className="text-sm font-medium">Date</label>
                   <Input
-                    type="number"
-                    value={filters.minAmount}
+                    type="date"
+                    value={filters.date}
                     onChange={(e) =>
-                      setFilters({ ...filters, minAmount: e.target.value })
+                      setFilters({ ...filters, date: e.target.value })
                     }
-                    placeholder="Min amount"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Max Amount</label>
-                  <Input
-                    type="number"
-                    value={filters.maxAmount}
-                    onChange={(e) =>
-                      setFilters({ ...filters, maxAmount: e.target.value })
-                    }
-                    placeholder="Max amount"
-                  />
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={resetFilters}
+                >
+                  Reset Filters
+                </Button>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
