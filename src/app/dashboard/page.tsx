@@ -202,6 +202,13 @@ const initialKpiData: KpiData = {
   },
 };
 
+const calculateChange = (current: number, previous: number) => {
+  if (!previous || previous === 0) return "0%";
+  const diff = ((current - previous) / previous) * 100;
+  const formatted = diff.toFixed(1);
+  return `${diff >= 0 ? "+" : ""}${formatted}%`;
+};
+
 // ---------- Helper to generate synthetic trend data ----------
 const generateTrend = (baseValue: number, key: string): TrendData[] => {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -250,8 +257,9 @@ export default function DashboardPage() {
         if (!res.ok) throw new Error("Failed to fetch dashboard");
         const payload = await res.json();
         if (!mounted) return;
-        if (payload && payload.success && payload.stats) {
+        if (payload && payload.success && payload.stats && payload.changes) {
           const s = payload.stats;
+          const c = payload.changes;
           // Helper: format numbers with commas
           const nf = (n: any): string => {
             if (n === null || n === undefined) return "--";
@@ -318,22 +326,30 @@ export default function DashboardPage() {
               activeUsers: {
                 ...initialKpiData.activeUsers,
                 value: nf(active),
+                change: c.activeUsers.change,
+                changeType: c.activeUsers.changeType,
                 trend: generateTrend(active || 1000, "activeUsers"),
               },
               newSignups: {
                 ...initialKpiData.newSignups,
                 value: nf(newSignups),
+                change: c.newSignups.change,
+                changeType: c.newSignups.changeType,
                 trend: generateTrend(newSignups || 200, "newSignups"),
               },
               totalRecords: {
                 ...initialKpiData.totalRecords,
                 value: nf(users),
+                change: c.totalRecords.change,
+                changeType: c.totalRecords.changeType,
                 trend: generateTrend(users || 5000, "totalRecords"),
               },
               revenue: {
                 ...initialKpiData.revenue,
                 // Pass the region to formatCurrency
                 value: formatCurrency(monthlyRevenue, region),
+                change: c.revenue.change,
+                changeType: c.revenue.changeType,
                 trend: generateTrend(monthlyRevenue || 1000, "revenue"),
               },
               appointments: initialKpiData.appointments,
