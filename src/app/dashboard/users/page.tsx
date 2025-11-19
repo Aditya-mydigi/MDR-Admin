@@ -67,6 +67,7 @@ type User = {
   expiry_date?: string | null;
   created_at?: string | null;
   region?: string; // Added region for clarity
+  user_plan_active: boolean;
 };
 
 export default function UsersPage() {
@@ -108,12 +109,18 @@ export default function UsersPage() {
   }, [sidebarCollapsed]);
 
   /* ✅ Utility Functions */
-  const getStatus = (user: User): "Active" | "Inactive" => {
+  const getStatus = (user: User): "Active" | "Inactive" | "Expired" => {
+    const isPlanActive = user.user_plan_active === true;
+
+    if (!isPlanActive) return "Inactive";
+
+    // If plan is active → check expiry date
     if (user.expiry_date) {
       const today = new Date();
       const expiry = new Date(user.expiry_date);
-      return expiry >= today ? "Active" : "Inactive";
+      return expiry >= today ? "Active" : "Expired";
     }
+
     return "Active";
   };
 
@@ -127,6 +134,7 @@ export default function UsersPage() {
     expiry_date: u.expiry_date ?? u.expiryDate ?? null,
     created_at: u.created_at ?? u.createdAt ?? null,
     region: u.region ?? "", // Ensure region is included
+    user_plan_active: u.user_plan_active ?? false,
   });
 
   /* ✅ Fetch All Users */
@@ -533,9 +541,12 @@ export default function UsersPage() {
                                   <span
                                     className={clsx(
                                       "px-2 py-1 rounded text-xs font-medium",
-                                      status === "Active"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-red-100 text-red-700"
+                                      status === "Active" &&
+                                        "bg-green-100 text-green-700",
+                                      status === "Inactive" &&
+                                        "bg-red-100 text-red-700",
+                                      status === "Expired" &&
+                                        "bg-gray-200 text-gray-700"
                                     )}
                                   >
                                     {status}
