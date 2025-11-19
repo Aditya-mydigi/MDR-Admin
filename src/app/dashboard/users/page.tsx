@@ -1,3 +1,4 @@
+// app/users/page.tsx (or wherever your UsersPage is)
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -44,17 +45,13 @@ import {
   ChevronsRight,
   RotateCcw,
   Trash2,
-  X,
-  Plus,
   Copy,
-  Check,
   Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import clsx from "clsx";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
-import Loader from "@/components/loader";
 
 type RawUser = { [k: string]: any };
 type User = {
@@ -66,7 +63,7 @@ type User = {
   phone_num?: string | null;
   expiry_date?: string | null;
   created_at?: string | null;
-  region?: string; // Added region for clarity
+  region?: string;
   user_plan_active: boolean;
 };
 
@@ -90,68 +87,54 @@ export default function UsersPage() {
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [resetLink, setResetLink] = useState("");
   const [filterText, setFilterText] = useState("");
-  // New state for region toggle
   const [regionFilter, setRegionFilter] = useState<"total" | "india" | "usa">(
     "total"
   );
 
-  /* ✅ Load sidebar state from localStorage */
+  // Sidebar persistence
   useEffect(() => {
-    const savedCollapsed = localStorage.getItem("sidebarCollapsed");
-    if (savedCollapsed !== null) {
-      setSidebarCollapsed(savedCollapsed === "true");
-    }
+    const saved = localStorage.getItem("sidebarCollapsed");
+    if (saved !== null) setSidebarCollapsed(saved === "true");
   }, []);
 
-  /* ✅ Save sidebar state to localStorage */
   useEffect(() => {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString());
   }, [sidebarCollapsed]);
 
-  /* ✅ Utility Functions */
   const getStatus = (user: User): "Active" | "Inactive" | "Expired" => {
-    const isPlanActive = user.user_plan_active === true;
-
-    if (!isPlanActive) return "Inactive";
-
-    // If plan is active → check expiry date
-    if (user.expiry_date) {
-      const today = new Date();
-      const expiry = new Date(user.expiry_date);
-      return expiry >= today ? "Active" : "Expired";
-    }
-
+    if (!user.user_plan_active) return "Inactive";
+    if (user.expiry_date && new Date(user.expiry_date) < new Date())
+      return "Expired";
     return "Active";
   };
 
   const normalizeUser = (u: RawUser): User => ({
     id: u.id ?? u.ID ?? u._id ?? String(Math.random()),
-    mdr_id: u.mdr_id ?? u.mdrId ?? u.mdrid ?? null,
+    mdr_id: u.mdr_id ?? u.mdrId ?? null,
     first_name: u.first_name ?? u.firstName ?? "",
     last_name: u.last_name ?? u.lastName ?? "",
-    email: u.email ?? u.emailAddress ?? null,
+    email: u.email ?? null,
     phone_num: u.phone_num ?? u.phone ?? null,
     expiry_date: u.expiry_date ?? u.expiryDate ?? null,
     created_at: u.created_at ?? u.createdAt ?? null,
-    region: u.region ?? "", // Ensure region is included
-    user_plan_active: u.user_plan_active ?? false,
+    region: (u.region ?? "").toLowerCase(),
+    user_plan_active: !!u.user_plan_active,
   });
 
-  /* ✅ Fetch All Users */
   const fetchUsers = async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/users?page=1&limit=50000`, {
         cache: "no-store",
       });
-      if (!res.ok) throw new Error("Failed to fetch users");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       const normalized = (data.users || []).map(normalizeUser);
       setAllUsers(normalized);
       setFilteredUsers(normalized);
       setTotalUsers(normalized.length);
-    } catch {
-      toast.error("Failed to fetch users");
+    } catch (err) {
+      toast.error("Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -161,115 +144,81 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  /* ✅ Filter and Sort Logic */
+  // Filtering & Sorting
   useEffect(() => {
     let filtered = [...allUsers];
 
-    // Apply region filter
     if (regionFilter !== "total") {
-      filtered = filtered.filter(
-        (u) => u.region?.toLowerCase() === regionFilter
-      );
+      filtered = filtered.filter((u) => u.region === regionFilter);
     }
 
-    // Apply text filter
     if (filterText.trim()) {
-      const searchText = filterText.toLowerCase();
+      const term = filterText.toLowerCase();
       filtered = filtered.filter((u) => {
-        const name = `${u.first_name || ""} ${u.last_name || ""}`.toLowerCase();
+        const name = `${u.first_name} ${u.last_name}`.toLowerCase();
         const email = (u.email || "").toLowerCase();
         const phone = (u.phone_num || "").toLowerCase();
-        const id = String(u.id).toLowerCase();
-        const mdr = String(u.mdr_id ?? "").toLowerCase();
-        const status = getStatus(u).toLowerCase();
-
+        const id = String(u.id);
+        const mdr = String(u.mdr_id ?? "");
         return (
-          name.includes(searchText) ||
-          email.includes(searchText) ||
-          phone.includes(searchText) ||
-          id.includes(searchText) ||
-          mdr.includes(searchText) ||
-          status.includes(searchText)
+          name.includes(term) ||
+          email.includes(term) ||
+          phone.includes(term) ||
+          id.includes(term) ||
+          mdr.includes(term)
         );
       });
     }
 
-    // Apply sorting
     if (sortConfig) {
       filtered.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
-
+        let aVal: any, bVal: any;
         switch (sortConfig.key) {
           case "mdr_id":
-            aValue = String(a.mdr_id ?? "");
-            bValue = String(b.mdr_id ?? "");
+            aVal = a.mdr_id ?? "";
+            bVal = b.mdr_id ?? "";
             break;
           case "username":
-            aValue = `${a.first_name || ""} ${a.last_name || ""}`.trim();
-            bValue = `${b.first_name || ""} ${b.last_name || ""}`.trim();
+            aVal = `${a.first_name} ${a.last_name}`;
+            bVal = `${b.first_name} ${b.last_name}`;
             break;
           case "email":
-            aValue = a.email || "";
-            bValue = b.email || "";
+            aVal = a.email ?? "";
+            bVal = b.email ?? "";
             break;
           case "status":
-            aValue = getStatus(a);
-            bValue = getStatus(b);
+            aVal = getStatus(a);
+            bVal = getStatus(b);
             break;
           default:
             return 0;
         }
-
-        if (aValue < bValue) {
-          return sortConfig.direction === "asc" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === "asc" ? 1 : -1;
-        }
+        if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
         return 0;
       });
     }
 
     setFilteredUsers(filtered);
     setTotalUsers(filtered.length);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [allUsers, filterText, sortConfig, regionFilter]);
 
   const handleSort = (key: string) => {
-    setSortConfig((current) => {
-      if (current?.key === key) {
-        if (current.direction === "asc") {
-          return { key, direction: "desc" };
-        }
-        return null;
-      }
-      return { key, direction: "asc" };
-    });
+    setSortConfig((prev) =>
+      prev?.key === key
+        ? prev.direction === "asc"
+          ? null
+          : { key, direction: "asc" }
+        : { key, direction: "asc" }
+    );
   };
 
-  /* ✅ Pagination */
   const totalPages = Math.ceil(totalUsers / pageSize) || 1;
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-  /* ✅ Row Selection */
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRows(paginatedUsers.map((u) => String(u.id)));
-    } else {
-      setSelectedRows([]);
-    }
-  };
-
-  const handleSelectRow = (id: string, checked: boolean) => {
-    if (checked) {
-      setSelectedRows([...selectedRows, id]);
-    } else {
-      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
-    }
-  };
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const isAllSelected =
     paginatedUsers.length > 0 &&
@@ -278,82 +227,35 @@ export default function UsersPage() {
     !isAllSelected &&
     paginatedUsers.some((u) => selectedRows.includes(String(u.id)));
 
-  /* ✅ Action Handlers */
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedRows(checked ? paginatedUsers.map((u) => String(u.id)) : []);
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    setSelectedRows((prev) =>
+      checked ? [...prev, id] : prev.filter((x) => x !== id)
+    );
+  };
+
   const handleResetPassword = (user: User) => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const resetToken = `${user.id}-${Date.now()}`;
-    const link = `${baseUrl}/reset-password?token=${resetToken}&id=${user.id}`;
+    const link = `${baseUrl}/reset-password?token=${user.id}-${Date.now()}&id=${
+      user.id
+    }`;
     setResetLink(link);
     setUserToReset(user);
     setResetPasswordDialogOpen(true);
   };
 
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(resetLink);
-      toast.success("Reset link copied to clipboard!");
-    } catch (error) {
-      toast.error("Failed to copy link");
-    }
-  };
-
-  const handleSendResetLink = async () => {
-    if (!userToReset) return;
-
-    try {
-      // TODO: Implement actual API call to send reset link
-      toast.success(
-        `Reset password link sent to ${
-          userToReset.email || userToReset.phone_num || "user"
-        }`
-      );
-      setResetPasswordDialogOpen(false);
-      setUserToReset(null);
-      setResetLink("");
-    } catch (error) {
-      toast.error("Failed to send reset link");
-    }
-  };
-
-  const handleResetPasswordCancel = () => {
-    setResetPasswordDialogOpen(false);
-    setUserToReset(null);
-    setResetLink("");
-  };
-
-  const handleDeleteClick = (user: User) => {
-    setUserToDelete(user);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!userToDelete) return;
-
-    try {
-      // TODO: Implement actual delete API call
-      setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-      setFilteredUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-      setTotalUsers((prev) => prev - 1);
-
-      toast.success(
-        `User ${userToDelete.first_name} ${userToDelete.last_name} deleted successfully`
-      );
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-    } catch (error) {
-      toast.error("Failed to delete user");
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setUserToDelete(null);
+    await navigator.clipboard.writeText(resetLink);
+    toast.success("Reset link copied!");
   };
 
   return (
     <div
       className={clsx(
-        "min-h-screen bg-gray-50 flex",
+        "min-h-screen bg-background flex",
         sidebarOpen && "overflow-hidden"
       )}
     >
@@ -363,272 +265,267 @@ export default function UsersPage() {
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         onCloseMobile={() => setSidebarOpen(false)}
       />
-      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-white">
-        {/* Custom Header with Search */}
-        <header className="flex justify-between items-center bg-white px-6 py-4 shadow-sm sticky top-0 z-30 border-b">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-gray-900">
-              User Management
-            </h1>
-          </div>
-          <div className="relative w-[300px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </header>
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {loading ? (
-            <Loader />
-          ) : (
-            <div className="space-y-4">
-              {/* Filter Bar */}
-              <Card className="border border-gray-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex flex-wrap items-center gap-3">
+
+      <div className="flex-1 flex flex-col bg-background">
+        <Header
+          title="User Management"
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          sidebarCollapsed={sidebarCollapsed}
+        />
+
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-6 max-w-7xl mx-auto">
+            {/* Filters */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                  <div className="relative flex-1 min-w-[300px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Filter tasks..."
+                      placeholder="Search users..."
                       value={filterText}
                       onChange={(e) => setFilterText(e.target.value)}
-                      className="flex-1 min-w-[200px] max-w-[300px]"
+                      className="pl-10"
+                      disabled={loading}
                     />
-                    {/* Region Toggle */}
-                    <div className="flex gap-2">
-                      <Button
-                        variant={
-                          regionFilter === "total" ? "default" : "outline"
-                        }
-                        onClick={() => setRegionFilter("total")}
-                        className="h-9"
-                      >
-                        Total
-                      </Button>
-                      <Button
-                        variant={
-                          regionFilter === "india" ? "default" : "outline"
-                        }
-                        onClick={() => setRegionFilter("india")}
-                        className="h-9"
-                      >
-                        India
-                      </Button>
-                      <Button
-                        variant={regionFilter === "usa" ? "default" : "outline"}
-                        onClick={() => setRegionFilter("usa")}
-                        className="h-9"
-                      >
-                        USA
-                      </Button>
-                    </div>
-                    <Button variant="outline" size="sm" className="h-9">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Status
-                    </Button>
-                    <Button variant="outline" size="sm" className="h-9">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Email/Phone
-                    </Button>
                   </div>
-                </CardHeader>
-              </Card>
+                  <div className="flex gap-2">
+                    {(["total", "india", "usa"] as const).map((region) => (
+                      <Button
+                        key={region}
+                        variant={
+                          regionFilter === region ? "default" : "outline"
+                        }
+                        onClick={() => setRegionFilter(region)}
+                        disabled={loading}
+                      >
+                        {region.charAt(0).toUpperCase() + region.slice(1)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
 
-              {/* Users Table */}
-              <Card className="border border-gray-200 shadow-sm">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-gray-50 hover:bg-gray-50">
-                          <TableHead className="w-12 px-4">
-                            <Checkbox
-                              checked={isAllSelected}
-                              onCheckedChange={handleSelectAll}
-                              className="cursor-pointer"
-                            />
-                          </TableHead>
-                          <TableHead className="px-4 py-3">
-                            <button
-                              onClick={() => handleSort("mdr_id")}
-                              className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-gray-900"
-                            >
-                              MDR ID
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </button>
-                          </TableHead>
-                          <TableHead className="px-4 py-3">
-                            <button
-                              onClick={() => handleSort("username")}
-                              className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-gray-900"
-                            >
-                              Username
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </button>
-                          </TableHead>
-                          <TableHead className="px-4 py-3">
-                            <button
-                              onClick={() => handleSort("email")}
-                              className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-gray-900"
-                            >
-                              Email/Phone
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </button>
-                          </TableHead>
-                          <TableHead className="px-4 py-3">
-                            <button
-                              onClick={() => handleSort("status")}
-                              className="flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-gray-900"
-                            >
-                              Status
-                              <ArrowUpDown className="h-3 w-3 text-gray-400" />
-                            </button>
-                          </TableHead>
-                          <TableHead className="w-12 px-4"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedUsers.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={6}
-                              className="text-center py-8 text-gray-500"
-                            >
-                              No users found
+            {/* Table */}
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={isAllSelected}
+                            onCheckedChange={handleSelectAll}
+                            aria-label="Select all"
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("mdr_id")}
+                            className="font-medium"
+                          >
+                            MDR ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("username")}
+                            className="font-medium"
+                          >
+                            Username <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("email")}
+                            className="font-medium"
+                          >
+                            Email/Phone <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead>
+                          <Button
+                            variant="ghost"
+                            onClick={() => handleSort("status")}
+                            className="font-medium"
+                          >
+                            Status <ArrowUpDown className="ml-2 h-4 w-4" />
+                          </Button>
+                        </TableHead>
+                        <TableHead className="w-12" />
+                      </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                      {loading ? (
+                        // Beautiful Skeleton Rows
+                        [...Array(10)].map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <div className="h-4 w-4 bg-muted rounded animate-pulse" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 w-48 bg-muted rounded animate-pulse" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-2">
+                                <div className="h-4 w-56 bg-muted rounded animate-pulse" />
+                                <div className="h-3 w-32 bg-muted/60 rounded animate-pulse" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-8 w-8 bg-muted rounded animate-pulse" />
                             </TableCell>
                           </TableRow>
-                        ) : (
-                          paginatedUsers.map((user) => {
-                            const status = getStatus(user);
-                            const isSelected = selectedRows.includes(
-                              String(user.id)
-                            );
-                            return (
-                              <TableRow
-                                key={user.id}
-                                className="hover:bg-gray-50 border-b"
-                              >
-                                <TableCell className="px-4 py-3">
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={(checked) =>
-                                      handleSelectRow(
-                                        String(user.id),
-                                        checked as boolean
-                                      )
-                                    }
-                                  />
-                                </TableCell>
-                                <TableCell className="px-4 py-3 font-medium text-sm">
-                                  {user.mdr_id ?? user.id}
-                                </TableCell>
-                                <TableCell className="px-4 py-3 text-sm">
-                                  {user.first_name} {user.last_name}
-                                </TableCell>
-                                <TableCell className="px-4 py-3">
-                                  <div className="text-sm">
-                                    <div>{user.email || "—"}</div>
-                                    {user.phone_num && (
-                                      <div className="text-gray-500 text-xs">
-                                        {user.phone_num}
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-4 py-3">
-                                  <span
-                                    className={clsx(
-                                      "px-2 py-1 rounded text-xs font-medium",
-                                      status === "Active" &&
-                                        "bg-green-100 text-green-700",
-                                      status === "Inactive" &&
-                                        "bg-red-100 text-red-700",
-                                      status === "Expired" &&
-                                        "bg-gray-200 text-gray-700"
-                                    )}
-                                  >
-                                    {status}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="px-4 py-3">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                                        <MoreVertical className="h-4 w-4 text-gray-400" />
-                                      </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      className="w-48 bg-white rounded-lg shadow-lg border py-1"
-                                    >
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          handleResetPassword(user)
-                                        }
-                                        className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer data-[highlighted]:bg-[#0A0A40] data-[highlighted]:text-white"
-                                      >
-                                        <RotateCcw className="h-4 w-4" />
-                                        Reset Password
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleDeleteClick(user)}
-                                        className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer text-red-600 data-[highlighted]:bg-[#0A0A40] data-[highlighted]:text-white"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer data-[highlighted]:bg-[#0A0A40] data-[highlighted]:text-white"
-                                      >
-                                        <X className="h-4 w-4" />
-                                        Cancel
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        ))
+                      ) : paginatedUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-16 text-muted-foreground"
+                          >
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedUsers.map((user) => {
+                          const status = getStatus(user);
+                          const isSelected = selectedRows.includes(
+                            String(user.id)
+                          );
 
-                  {/* Pagination Footer */}
-                  <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
-                    <div className="text-sm text-gray-600">
-                      {selectedRows.length} of {totalUsers} row(s) selected.
+                          return (
+                            <TableRow
+                              key={user.id}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) =>
+                                    handleSelectRow(
+                                      String(user.id),
+                                      checked as boolean
+                                    )
+                                  }
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {user.mdr_id ?? user.id}
+                              </TableCell>
+                              <TableCell>
+                                {user.first_name} {user.last_name}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div>{user.email || "—"}</div>
+                                  {user.phone_num && (
+                                    <div className="text-muted-foreground text-xs">
+                                      {user.phone_num}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={clsx(
+                                    "px-2.5 py-1 rounded-full text-xs font-medium",
+                                    status === "Active" &&
+                                      "bg-green-100 text-green-800",
+                                    status === "Inactive" &&
+                                      "bg-red-100 text-red-800",
+                                    status === "Expired" &&
+                                      "bg-gray-100 text-gray-800"
+                                  )}
+                                >
+                                  {status}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent
+                                    align="end"
+                                    className="bg-background border shadow-lg"
+                                  >
+                                    <DropdownMenuItem
+                                      onClick={() => handleResetPassword(user)}
+                                    >
+                                      <RotateCcw className="mr-2 h-4 w-4" />{" "}
+                                      Reset Password
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setUserToDelete(user);
+                                        setDeleteDialogOpen(true);
+                                      }}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                      User
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination */}
+                {!loading && totalUsers > 0 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/30">
+                    <div className="text-sm text-muted-foreground">
+                      {selectedRows.length} of {totalUsers.toLocaleString()}{" "}
+                      selected
                     </div>
                     <div className="flex items-center gap-4">
                       <Select
                         value={pageSize.toString()}
-                        onValueChange={(value) => {
-                          setPageSize(Number(value));
+                        onValueChange={(v) => {
+                          setPageSize(+v);
                           setCurrentPage(1);
                         }}
                       >
-                        <SelectTrigger className="w-[140px] h-9 text-sm">
-                          <SelectValue />
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Rows per page" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="10">Rows per page 10</SelectItem>
-                          <SelectItem value="20">Rows per page 20</SelectItem>
-                          <SelectItem value="50">Rows per page 50</SelectItem>
-                          <SelectItem value="100">Rows per page 100</SelectItem>
+                          {[10, 20, 50, 100].map((n) => (
+                            <SelectItem key={n} value={n.toString()}>
+                              Rows per page {n}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <div className="text-sm text-gray-600">
+
+                      <span className="text-sm text-muted-foreground">
                         Page {currentPage} of {totalPages}
-                      </div>
-                      <div className="flex items-center gap-1">
+                      </span>
+
+                      <div className="flex gap-1">
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9"
                           onClick={() => setCurrentPage(1)}
                           disabled={currentPage === 1}
                         >
@@ -637,7 +534,6 @@ export default function UsersPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9"
                           onClick={() =>
                             setCurrentPage((p) => Math.max(1, p - 1))
                           }
@@ -648,7 +544,6 @@ export default function UsersPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9"
                           onClick={() =>
                             setCurrentPage((p) => Math.min(totalPages, p + 1))
                           }
@@ -659,7 +554,6 @@ export default function UsersPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-9 w-9"
                           onClick={() => setCurrentPage(totalPages)}
                           disabled={currentPage === totalPages}
                         >
@@ -668,118 +562,97 @@ export default function UsersPage() {
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Reset Password Dialog */}
-          <Dialog
-            open={resetPasswordDialogOpen}
-            onOpenChange={handleResetPasswordCancel}
-          >
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-gray-900">
-                  Reset Password
-                </DialogTitle>
-                <DialogDescription className="text-base text-gray-600 pt-3">
-                  Send your reset password link to users email or phone
-                </DialogDescription>
-              </DialogHeader>
-              {userToReset && (
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-2">
-                      Send reset link to Email/Phone
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={resetLink}
-                        onChange={(e) => setResetLink(e.target.value)}
-                        placeholder="https://reset-password.com/mpr"
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleSendResetLink}
-                        className="bg-[#0a3a7a] hover:bg-[#09406d] text-white min-w-[80px]"
-                      >
-                        Sent
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <button
-                      onClick={handleCopyLink}
-                      className="text-sm text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
-                    >
-                      <Copy className="h-4 w-4" />
-                      Copy link
-                    </button>
-                    <div className="text-sm text-gray-500">
-                      User: {userToReset.first_name} {userToReset.last_name} (
-                      {userToReset.email || userToReset.phone_num})
-                    </div>
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Confirmation Dialog */}
-          <Dialog open={deleteDialogOpen} onOpenChange={handleDeleteCancel}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-gray-900">
-                  Are you absolutely sure?
-                </DialogTitle>
-                <DialogDescription className="text-base text-gray-600 pt-3">
-                  Are you sure you want to remove this user, all the records
-                  stored related to this ID will be deleted as well.
-                </DialogDescription>
-              </DialogHeader>
-              {userToDelete && (
-                <div className="py-4 px-1">
-                  <div className="text-sm text-gray-700 space-y-2">
-                    <div>
-                      <span className="font-semibold">User ID: </span>
-                      <span className="text-gray-600">{userToDelete.id}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold">Name: </span>
-                      <span className="text-gray-600">
-                        {userToDelete.first_name} {userToDelete.last_name}
-                      </span>
-                    </div>
-                    {userToDelete.email && (
-                      <div>
-                        <span className="font-semibold">Email: </span>
-                        <span className="text-gray-600">
-                          {userToDelete.email}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              <DialogFooter className="gap-3 sm:gap-2 sm:justify-end pt-4">
-                <Button
-                  variant="outline"
-                  onClick={handleDeleteCancel}
-                  className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-600 min-w-[100px]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleDeleteConfirm}
-                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-                >
-                  Yes, confirm
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </main>
+
+        {/* Reset Password Dialog */}
+        <Dialog
+          open={resetPasswordDialogOpen}
+          onOpenChange={setResetPasswordDialogOpen}
+        >
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Reset Password Link</DialogTitle>
+              <DialogDescription>
+                Send this secure reset link to the user
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <Input
+                  value={resetLink}
+                  readOnly
+                  className="flex-1 font-mono text-sm"
+                />
+                <Button onClick={handleCopyLink} size="sm">
+                  <Copy className="h-4 w-4 mr-2" /> Copy
+                </Button>
+              </div>
+              {userToReset && (
+                <p className="text-sm text-muted-foreground">
+                  For:{" "}
+                  <strong>
+                    {userToReset.first_name} {userToReset.last_name}
+                  </strong>{" "}
+                  ({userToReset.email || userToReset.phone_num})
+                </p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete User?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. All data for this user will be
+                permanently removed.
+              </DialogDescription>
+            </DialogHeader>
+            {userToDelete && (
+              <div className="py-4 space-y-2 text-sm">
+                <p>
+                  <strong>Name:</strong> {userToDelete.first_name}{" "}
+                  {userToDelete.last_name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {userToDelete.email || "—"}
+                </p>
+                <p>
+                  <strong>ID:</strong> {userToDelete.id}
+                </p>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  setAllUsers((prev) =>
+                    prev.filter((u) => u.id !== userToDelete?.id)
+                  );
+                  setFilteredUsers((prev) =>
+                    prev.filter((u) => u.id !== userToDelete?.id)
+                  );
+                  toast.success("User deleted");
+                  setDeleteDialogOpen(false);
+                }}
+              >
+                Delete User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
