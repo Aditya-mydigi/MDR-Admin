@@ -121,66 +121,52 @@ export default function BillingPage() {
 
   // Fetch data on tab switch
   useEffect(() => {
-    if (activeMainTab === "subscriptions") {
-      const fetchSubscriptions = async () => {
-        setTabLoading(true);
-        setError(null);
+    const fetchData = async () => {
+      setTabLoading(true);
+      setError(null);
 
-        try {
-          const endpoint =
-            activeRegionTab === "india"
-              ? "/api/billing/subscription/india"
-              : "/api/billing/subscription/usa";
+      try {
+        const subEndpoint =
+          activeRegionTab === "india"
+            ? "/api/billing/subscription/india"
+            : "/api/billing/subscription/usa";
 
-          const response = await fetch(endpoint);
-          const result: ApiResponse<Subscription[]> = await response.json();
+        const txnEndpoint =
+          activeRegionTab === "india"
+            ? "/api/billing/transactions/india"
+            : "/api/billing/transactions/usa";
 
-          if (result.success && result.data) {
-            setSubscriptions(result.data);
-          } else {
-            setError(result.error || "Failed to fetch subscriptions");
-            setSubscriptions([]);
-          }
-        } catch (err) {
-          setError("Network error occurred");
+        const [subRes, txnRes] = await Promise.all([
+          fetch(subEndpoint),
+          fetch(txnEndpoint),
+        ]);
+
+        const subJson = await subRes.json();
+        const txnJson = await txnRes.json();
+
+        if (subJson.success) {
+          setSubscriptions(subJson.data);
+        } else {
           setSubscriptions([]);
-        } finally {
-          setTabLoading(false);
         }
-      };
 
-      fetchSubscriptions();
-    } else {
-      const fetchTransactions = async () => {
-        setTabLoading(true);
-        setError(null);
-
-        try {
-          const endpoint =
-            activeRegionTab === "india"
-              ? "/api/billing/transactions/india"
-              : "/api/billing/transactions/usa";
-
-          const response = await fetch(endpoint);
-          const result = await response.json();
-
-          if (Array.isArray(result)) {
-            setTransactions(result);
-          } else {
-            setError("Failed to fetch transactions");
-            setTransactions([]);
-          }
-        } catch (err) {
-          setError("Network error occurred");
+        if (Array.isArray(txnJson)) {
+          setTransactions(txnJson);
+        } else {
           setTransactions([]);
-        } finally {
-          setTabLoading(false);
         }
-      };
+      } catch (err) {
+        setError("Network error occurred");
+        setSubscriptions([]);
+        setTransactions([]);
+      } finally {
+        setTabLoading(false);
+      }
+    };
 
-      fetchTransactions();
-    }
-  }, [activeMainTab, activeRegionTab]);
+    fetchData();
+  }, [activeRegionTab]); // FIXED size array (always 1 item)
+  // 🔥 No activeMainTab here
 
   // -----------------------------
   // Helpers
@@ -239,6 +225,10 @@ export default function BillingPage() {
     }));
   };
 
+  const getUserTransactions = (email: string) => {
+    const user = transactions.find((u) => u.email === email);
+    return user?.transactions || [];
+  };
   // Filter and sort subscriptions
   const filteredAndSortedSubscriptions = useMemo(() => {
     let filtered = [...subscriptions];
@@ -439,15 +429,13 @@ export default function BillingPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead></TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
                     onClick={() => handleSort("username")}
-                    className="flex items-center gap-1"
-                  >
-                    Username
-                    <ArrowUpDown className="h-4 w-4" />
-                  </Button>
+                  />
+                  Username
                 </TableHead>
                 <TableHead>
                   <Button
@@ -494,17 +482,84 @@ export default function BillingPage() {
 
             <TableBody>
               {data.map((row, idx) => (
-                <TableRow key={idx}>
-                  <TableCell>{row.username || "—"}</TableCell>
-                  <TableCell>{row.email || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{row.plan_id || "—"}</Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(row.datetime)}</TableCell>
-                  <TableCell>
-                    {formatAmount(row.final_amount, region)}
-                  </TableCell>
-                </TableRow>
+                <React.Fragment key={idx}>
+                  {/* Main user row */}
+                  <TableRow>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleRow(row.email!)}
+                      >
+                        {expandedRows.has(row.email!) ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </TableCell>
+
+                    <TableCell>{row.username || "—"}</TableCell>
+                    <TableCell>{row.email || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.plan_id || "—"}</Badge>
+                    </TableCell>
+                    <TableCell>{formatDate(row.datetime)}</TableCell>
+                    <TableCell>
+                      {formatAmount(row.final_amount, region)}
+                    </TableCell>
+                  </TableRow>
+
+                  {/* 🔻 EXPANDED TRANSACTIONS ROW — STEP 3 GOES HERE */}
+                  {expandedRows.has(row.email!) && (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <div className="pl-8">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Plan ID</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Date</TableHead>
+                              </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                              {getUserTransactions(row.email!).length === 0 ? (
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={3}
+                                    className="text-center"
+                                  >
+                                    No transactions found
+                                  </TableCell>
+                                </TableRow>
+                              ) : (
+                                getUserTransactions(row.email!).map(
+                                  (txn, tIdx) => (
+                                    <TableRow key={tIdx}>
+                                      <TableCell>
+                                        <Badge variant="outline">
+                                          {txn.plan_id}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>
+                                        {formatAmount(txn.final_amount, region)}
+                                      </TableCell>
+                                      <TableCell>
+                                        {formatDate(txn.datetime)}
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                )
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
@@ -725,9 +780,6 @@ export default function BillingPage() {
     </Card>
   );
 
-  // -----------------------------
-  // Return UI
-  // -----------------------------
   return (
     <div
       className={clsx(
