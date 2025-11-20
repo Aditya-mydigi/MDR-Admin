@@ -2,13 +2,9 @@ import { NextResponse } from "next/server";
 import { generateAndSendOtp } from "@/lib/email";
 
 export const authorizedEmails = [
-  "support@mydigirecords.com",
   "aditya.amparmar@gmail.com",
-  "chiragbora2@gmail.com",
   "akash@mydigirecords.com",
-  "rahul@mydigirecords.com",
   "hemant@mydigirecords.com",
-  "saroj@mydigirecords.com",
 ];
 
 export async function POST(req: Request) {
