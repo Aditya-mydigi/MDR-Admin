@@ -87,6 +87,9 @@ export default function UsersPage() {
   const [userToReset, setUserToReset] = useState<User | null>(null);
   const [resetLink, setResetLink] = useState("");
   const [filterText, setFilterText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "Active" | "Inactive" | "Expired"
+  >("all");
   const [regionFilter, setRegionFilter] = useState<"total" | "india" | "usa">(
     "total"
   );
@@ -152,10 +155,16 @@ export default function UsersPage() {
       filtered = filtered.filter((u) => u.region === regionFilter);
     }
 
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((u) => getStatus(u) === statusFilter);
+    }
+
+    // Text search
     if (filterText.trim()) {
       const term = filterText.toLowerCase();
       filtered = filtered.filter((u) => {
-        const name = `${u.first_name} ${u.last_name}`.toLowerCase();
+        const name = `${u.first_name ?? ""} ${u.last_name ?? ""}`.toLowerCase();
         const email = (u.email || "").toLowerCase();
         const phone = (u.phone_num || "").toLowerCase();
         const id = String(u.id);
@@ -172,15 +181,16 @@ export default function UsersPage() {
 
     if (sortConfig) {
       filtered.sort((a, b) => {
-        let aVal: any, bVal: any;
+        let aVal: any = "";
+        let bVal: any = "";
         switch (sortConfig.key) {
           case "mdr_id":
             aVal = a.mdr_id ?? "";
             bVal = b.mdr_id ?? "";
             break;
           case "username":
-            aVal = `${a.first_name} ${a.last_name}`;
-            bVal = `${b.first_name} ${b.last_name}`;
+            aVal = `${a.first_name ?? ""} ${a.last_name ?? ""}`;
+            bVal = `${b.first_name ?? ""} ${b.last_name ?? ""}`;
             break;
           case "email":
             aVal = a.email ?? "";
@@ -190,8 +200,6 @@ export default function UsersPage() {
             aVal = getStatus(a);
             bVal = getStatus(b);
             break;
-          default:
-            return 0;
         }
         if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
@@ -202,7 +210,7 @@ export default function UsersPage() {
     setFilteredUsers(filtered);
     setTotalUsers(filtered.length);
     setCurrentPage(1);
-  }, [allUsers, filterText, sortConfig, regionFilter]);
+  }, [allUsers, filterText, sortConfig, regionFilter, statusFilter]); // always 5 items
 
   const handleSort = (key: string) => {
     setSortConfig((prev) =>
@@ -278,8 +286,8 @@ export default function UsersPage() {
             {/* Filters */}
             <Card>
               <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                  <div className="relative flex-1 min-w-[300px]">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+                  <div className="relative w-full sm:w-80">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search users..."
@@ -289,6 +297,29 @@ export default function UsersPage() {
                       disabled={loading}
                     />
                   </div>
+
+                  {/* Status Filter */}
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) =>
+                      setStatusFilter(
+                        value as "all" | "Active" | "Inactive" | "Expired"
+                      )
+                    }
+                    disabled={loading}
+                  >
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                      <SelectItem value="Expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Region Buttons */}
                   <div className="flex gap-2">
                     {(["total", "india", "usa"] as const).map((region) => (
                       <Button

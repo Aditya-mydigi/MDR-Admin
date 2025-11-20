@@ -34,7 +34,7 @@ export default function Sidebar({
   const iconMap: Record<string, React.ReactNode> = {
     Dashboard: <LayoutDashboard className="h-5 w-5" />,
     User: <Users className="h-5 w-5" />,
-    "Billing Details": <CreditCard className="h-5 w-5" />,
+    Subscriptions: <CreditCard className="h-5 w-5" />,
     Transaction: <CreditCard className="h-5 w-5" />,
     "Log Out": <LogOut className="h-5 w-5" />,
   };
@@ -42,7 +42,7 @@ export default function Sidebar({
   const navItems = [
     { label: "Dashboard", href: "/dashboard" },
     { label: "User", href: "/dashboard/users" },
-    { label: "Billing Details", href: "/dashboard/billing" },
+    { label: "Subscriptions", href: "/dashboard/billing" },
     { label: "Transaction", href: "/dashboard/transaction" },
   ];
 
