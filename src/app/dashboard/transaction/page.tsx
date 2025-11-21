@@ -22,15 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, RotateCcw } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 import clsx from "clsx";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // ← Fixed import!
+
+// DateRangePicker Component (copy this once into your project)
+import { DateRangePicker } from "@/components/ui/date-range-picker"; // ← Create this file
 
 interface Transaction {
   name: string;
@@ -56,12 +54,20 @@ export default function AllTransactionsPage() {
 
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState({ plan_id: "", date: "" });
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
+  });
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "datetime",
     direction: "desc",
   });
 
+  // Sidebar persistence
   useEffect(() => {
     const saved = localStorage.getItem("sidebarCollapsed");
     if (saved !== null) setSidebarCollapsed(saved === "true");
@@ -71,7 +77,7 @@ export default function AllTransactionsPage() {
     localStorage.setItem("sidebarCollapsed", sidebarCollapsed.toString());
   }, [sidebarCollapsed]);
 
-  // Fetch and flatten
+  // Fetch transactions
   useEffect(() => {
     const fetchTransactions = async () => {
       setLoading(true);
@@ -118,6 +124,7 @@ export default function AllTransactionsPage() {
           day: "numeric",
           year: "numeric",
         });
+
   const formatAmount = (amount: any, region: "India" | "USA") => {
     if (amount == null) return region === "India" ? "₹0.00" : "$0.00";
     const num = typeof amount === "string" ? parseFloat(amount) : amount;
@@ -132,9 +139,10 @@ export default function AllTransactionsPage() {
     }));
   };
 
-  const resetFilters = () => {
-    setFilters({ plan_id: "", date: "" });
+  const resetAllFilters = () => {
     setSearchTerm("");
+    setPlanFilter("all");
+    setDateRange({ from: undefined, to: undefined });
   };
 
   const uniquePlanIds = useMemo(() => {
@@ -146,26 +154,41 @@ export default function AllTransactionsPage() {
   const displayedTransactions = useMemo(() => {
     let filtered = [...allTransactions];
 
+    // Search
     if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (t) =>
-          t.name.toLowerCase().includes(lower) ||
-          t.email.toLowerCase().includes(lower) ||
-          t.plan_id?.toLowerCase().includes(lower)
+          t.name.toLowerCase().includes(term) ||
+          t.email.toLowerCase().includes(term) ||
+          t.plan_id?.toLowerCase().includes(term)
       );
     }
 
-    if (filters.plan_id && filters.plan_id !== "all") {
-      filtered = filtered.filter((t) => t.plan_id === filters.plan_id);
-    }
-    if (filters.date) {
-      const filterDate = new Date(filters.date).toDateString();
-      filtered = filtered.filter(
-        (t) => new Date(t.datetime).toDateString() === filterDate
-      );
+    // Plan filter
+    if (planFilter && planFilter !== "all") {
+      filtered = filtered.filter((t) => t.plan_id === planFilter);
     }
 
+    // Date range filter
+    if (dateRange.from || dateRange.to) {
+      filtered = filtered.filter((t) => {
+        if (!t.datetime) return false;
+        const txnDate = new Date(t.datetime);
+        txnDate.setHours(0, 0, 0, 0);
+
+        const from = dateRange.from
+          ? new Date(dateRange.from.setHours(0, 0, 0, 0))
+          : null;
+        const to = dateRange.to
+          ? new Date(dateRange.to.setHours(23, 59, 59, 999))
+          : null;
+
+        return (!from || txnDate >= from) && (!to || txnDate <= to);
+      });
+    }
+
+    // Sorting
     filtered.sort((a, b) => {
       let aVal: any =
         sortConfig.key === "amount" ? a.final_amount : a[sortConfig.key];
@@ -190,7 +213,7 @@ export default function AllTransactionsPage() {
     });
 
     return filtered;
-  }, [allTransactions, searchTerm, filters, sortConfig]);
+  }, [allTransactions, searchTerm, planFilter, dateRange, sortConfig]);
 
   const regionLabel = activeRegionTab === "india" ? "India" : "USA";
 
@@ -216,197 +239,180 @@ export default function AllTransactionsPage() {
         />
 
         <main className="flex-1 overflow-y-auto p-6 bg-muted/40">
-          <Card className="max-w-7xl mx-auto">
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-2xl">All Transactions</CardTitle>
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Tabs + Title */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h1 className="text-3xl font-bold">All Transactions</h1>
+              <Tabs
+                value={activeRegionTab}
+                onValueChange={(v) => setActiveRegionTab(v as any)}
+              >
+                <TabsList className="grid grid-cols-2">
+                  <TabsTrigger value="india">India</TabsTrigger>
+                  <TabsTrigger value="usa">USA</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
-                <Tabs
-                  value={activeRegionTab}
-                  onValueChange={(v) => setActiveRegionTab(v as any)}
-                >
-                  <TabsList className="grid grid-cols-2 w-fit">
-                    <TabsTrigger value="india">India</TabsTrigger>
-                    <TabsTrigger value="usa">USA</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
+            {/* Modern Filter Bar */}
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search name, email, plan..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                      disabled={loading}
+                    />
+                  </div>
 
-              <div className="flex flex-wrap items-center gap-4 mt-6">
-                <div className="relative flex-1 min-w-64">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, email, or plan..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                  <Select
+                    value={planFilter}
+                    onValueChange={setPlanFilter}
                     disabled={loading}
+                  >
+                    <SelectTrigger className="w-full sm:w-56">
+                      <SelectValue placeholder="All Plans" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Plans</SelectItem>
+                      {uniquePlanIds.map((id) => (
+                        <SelectItem key={id} value={id}>
+                          {id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <DateRangePicker
+                    date={dateRange}
+                    onDateChange={setDateRange}
                   />
+
+                  <Button
+                    variant="outline"
+                    onClick={resetAllFilters}
+                    disabled={loading}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reset
+                  </Button>
                 </div>
+              </CardHeader>
+            </Card>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={loading}>
-                      <Filter className="mr-2 h-4 w-4" />
-                      Filters
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-80 p-4 bg-background border shadow-lg">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium">Plan ID</label>
-                        <Select
-                          value={filters.plan_id}
-                          onValueChange={(v) =>
-                            setFilters({ ...filters, plan_id: v })
-                          }
-                          disabled={loading}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Plans" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Plans</SelectItem>
-                            {uniquePlanIds.map((id) => (
-                              <SelectItem key={id} value={id}>
-                                {id}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <label className="text-sm font-medium">Date</label>
-                        <Input
-                          type="date"
-                          value={filters.date}
-                          onChange={(e) =>
-                            setFilters({ ...filters, date: e.target.value })
-                          }
-                          disabled={loading}
-                        />
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={resetFilters}
+            {/* Table */}
+            <Card>
+              <CardContent className="p-0">
+                {loading ? (
+                  // Beautiful skeleton loader (restored + enhanced)
+                  <div className="space-y-4 p-6">
+                    {[...Array(10)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-4 animate-pulse"
                       >
-                        Reset Filters
-                      </Button>
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              {loading ? (
-                // Beautiful Shadcn-style skeleton
-                <div className="space-y-4">
-                  {[...Array(10)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center space-x-4 animate-pulse"
-                    >
-                      <div className="h-4 bg-muted rounded w-1/4"></div>
-                      <div className="h-4 bg-muted rounded w-1/3"></div>
-                      <div className="h-4 bg-muted rounded w-32"></div>
-                      <div className="h-4 bg-muted rounded w-28"></div>
-                      <div className="h-4 bg-muted rounded w-20 ml-auto"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="text-center py-12 text-destructive">
-                  {error}
-                </div>
-              ) : displayedTransactions.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  No transactions found
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-md border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort("name")}
-                            >
-                              Name <ArrowUpDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </TableHead>
-                          <TableHead>
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort("email")}
-                            >
-                              Email <ArrowUpDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </TableHead>
-                          <TableHead>
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort("plan_id")}
-                            >
-                              Plan ID <ArrowUpDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </TableHead>
-                          <TableHead>
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort("datetime")}
-                            >
-                              Date <ArrowUpDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </TableHead>
-                          <TableHead className="text-right">
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleSort("amount")}
-                            >
-                              Amount <ArrowUpDown className="ml-2 h-4 w-4" />
-                            </Button>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {displayedTransactions.map((txn, i) => (
-                          <TableRow key={`${txn.email}-${txn.datetime}-${i}`}>
-                            <TableCell className="font-medium">
-                              {txn.name}
-                            </TableCell>
-                            <TableCell>{txn.email}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {txn.plan_id || "—"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{formatDate(txn.datetime)}</TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatAmount(
-                                txn.final_amount,
-                                regionLabel as any
-                              )}
-                            </TableCell>
+                        <div className="h-10 bg-muted rounded w-1/5" />
+                        <div className="h-10 bg-muted rounded flex-1" />
+                        <div className="h-10 bg-muted rounded w-32" />
+                        <div className="h-10 bg-muted rounded w-32" />
+                        <div className="h-10 bg-muted rounded w-24 ml-auto" />
+                      </div>
+                    ))}
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-20 text-destructive text-lg">
+                    {error}
+                  </div>
+                ) : displayedTransactions.length === 0 ? (
+                  <div className="text-center py-20 text-muted-foreground">
+                    <p className="text-xl">No transactions found</p>
+                    <p className="text-sm mt-2">Try adjusting your filters</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("name")}
+                              >
+                                Name <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
+                            <TableHead>
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("email")}
+                              >
+                                Email <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
+                            <TableHead>
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("plan_id")}
+                              >
+                                Plan ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
+                            <TableHead>
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("datetime")}
+                              >
+                                Date <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
+                            <TableHead className="text-right">
+                              <Button
+                                variant="ghost"
+                                onClick={() => handleSort("amount")}
+                              >
+                                Amount <ArrowUpDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <div className="text-center text-sm text-muted-foreground mt-6">
-                    Showing {displayedTransactions.length.toLocaleString()}{" "}
-                    transaction(s)
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedTransactions.map((txn, i) => (
+                            <TableRow key={`${txn.email}-${txn.datetime}-${i}`}>
+                              <TableCell className="font-medium">
+                                {txn.name}
+                              </TableCell>
+                              <TableCell>{txn.email}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {txn.plan_id || "—"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatDate(txn.datetime)}</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatAmount(
+                                  txn.final_amount,
+                                  regionLabel as any
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="px-6 py-4 text-sm text-muted-foreground border-t bg-muted/5">
+                      Showing {displayedTransactions.length.toLocaleString()}{" "}
+                      transaction(s)
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </main>
       </div>
     </div>
