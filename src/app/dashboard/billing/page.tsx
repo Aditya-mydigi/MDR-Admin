@@ -24,6 +24,7 @@ import {
   Filter,
   Search,
   ArrowUpDown,
+  RotateCcw,
 } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
@@ -36,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 // -----------------------------
 // Types
@@ -65,9 +67,6 @@ interface SortConfig {
   direction: "asc" | "desc";
 }
 
-// -----------------------------
-// Component
-// -----------------------------
 export default function BillingPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -90,6 +89,13 @@ export default function BillingPage() {
   const [filters, setFilters] = useState({
     plan_id: "",
     date: "",
+  });
+  const [dateRange, setDateRange] = useState<{
+    from: Date | undefined;
+    to: Date | undefined;
+  }>({
+    from: undefined,
+    to: undefined,
   });
 
   // Sidebar collapse persistence
@@ -150,10 +156,10 @@ export default function BillingPage() {
     fetchData();
   }, [activeRegionTab]);
 
-  // Helpers
-  const resetFilters = () => {
-    setFilters({ plan_id: "", date: "" });
+  const resetAllFilters = () => {
     setSearchTerm("");
+    setFilters({ plan_id: "", date: "" });
+    setDateRange({ from: undefined, to: undefined });
   };
 
   const formatDate = (date: string | null) => {
@@ -200,28 +206,41 @@ export default function BillingPage() {
   const filteredAndSortedSubscriptions = useMemo(() => {
     let filtered = [...subscriptions];
 
+    // Text search
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (s) =>
-          s.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.plan_id?.toLowerCase().includes(searchTerm.toLowerCase())
+          s.username?.toLowerCase().includes(term) ||
+          s.email?.toLowerCase().includes(term) ||
+          s.plan_id?.toLowerCase().includes(term)
       );
     }
 
+    // Plan ID filter
     if (filters.plan_id && filters.plan_id !== "all") {
       filtered = filtered.filter((s) => s.plan_id === filters.plan_id);
     }
-    if (filters.date) {
+
+    // Date range filter
+    if (dateRange.from || dateRange.to) {
       filtered = filtered.filter((s) => {
         if (!s.datetime) return false;
-        return (
-          new Date(s.datetime).toDateString() ===
-          new Date(filters.date).toDateString()
-        );
+        const subDate = new Date(s.datetime);
+        subDate.setHours(0, 0, 0, 0); // normalize
+
+        const from = dateRange.from
+          ? new Date(dateRange.from.setHours(0, 0, 0, 0))
+          : null;
+        const to = dateRange.to
+          ? new Date(dateRange.to.setHours(23, 59, 59, 999))
+          : null;
+
+        return (!from || subDate >= from) && (!to || subDate <= to);
       });
     }
 
+    // Sorting (unchanged)
     filtered.sort((a, b) => {
       const aVal = a[sortConfig.key as keyof Subscription];
       const bVal = b[sortConfig.key as keyof Subscription];
@@ -246,7 +265,14 @@ export default function BillingPage() {
     });
 
     return filtered;
-  }, [subscriptions, searchTerm, sortConfig, filters]);
+  }, [
+    subscriptions,
+    searchTerm,
+    filters.plan_id,
+    dateRange.from,
+    dateRange.to,
+    sortConfig,
+  ]);
 
   const uniquePlanIds = useMemo(() => {
     const set = new Set<string>();
@@ -262,201 +288,204 @@ export default function BillingPage() {
     data: Subscription[],
     region: "India" | "USA"
   ) => (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{region} Subscriptions</CardTitle>
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
+    <div className="space-y-6">
+      {/* ==== FILTER BAR (same style as Users page) ==== */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
+            {/* Search */}
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search username, email or plan…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Plan ID filter */}
+            <Select
+              value={filters.plan_id}
+              onValueChange={(v) => setFilters((f) => ({ ...f, plan_id: v }))}
+            >
+              <SelectTrigger className="w-full sm:w-56">
+                <SelectValue placeholder="All Plans" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {uniquePlanIds.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Date Range */}
+            <div className="flex gap-3 items-center">
+              <DateRangePicker
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="w-full sm:w-auto"
+              />
+            </div>
+
+            {/* Reset button */}
+            <Button variant="outline" onClick={resetAllFilters}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
           </div>
+        </CardHeader>
+      </Card>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-80 p-4">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">Plan ID</label>
-                  <Select
-                    value={filters.plan_id}
-                    onValueChange={(v) =>
-                      setFilters((f) => ({ ...f, plan_id: v }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All plans" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Plans</SelectItem>
-                      {uniquePlanIds.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Date</label>
-                  <Input
-                    type="date"
-                    value={filters.date}
-                    onChange={(e) =>
-                      setFilters((f) => ({ ...f, date: e.target.value }))
-                    }
-                  />
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={resetFilters}
-                >
-                  Reset Filters
-                </Button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
+      {/* ==== TABLE CARD ==== */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{region} Subscriptions</CardTitle>
+        </CardHeader>
 
-      <CardContent>
-        {tabLoading ? (
-          <div className="text-center py-12">Loading...</div>
-        ) : error ? (
-          <div className="text-center py-12 text-destructive">{error}</div>
-        ) : data.length === 0 ? (
-          <div className="text-center py-12">No subscriptions found</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleSort("username")}
-                  >
-                    Username <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("email")}>
-                    Email <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" onClick={() => handleSort("plan_id")}>
-                    Plan ID <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleSort("datetime")}
-                  >
-                    Latest Payment <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleSort("final_amount")}
-                  >
-                    Amount <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {data.map((sub) => (
-                <React.Fragment key={sub.email}>
-                  {/* Main Row */}
+        <CardContent className="p-0">
+          {tabLoading ? (
+            <div className="text-center py-12">Loading…</div>
+          ) : error ? (
+            <div className="text-center py-12 text-destructive">{error}</div>
+          ) : data.length === 0 ? (
+            <div className="text-center py-12">No subscriptions found</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell>
+                    <TableHead className="w-10" />
+                    <TableHead>
                       <Button
                         variant="ghost"
-                        size="sm"
-                        onClick={() => toggleRow(sub.email)}
+                        onClick={() => handleSort("username")}
                       >
-                        {expandedRows.has(sub.email) ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
+                        Username <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
-                    </TableCell>
-                    <TableCell>{sub.username || "—"}</TableCell>
-                    <TableCell>{sub.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{sub.plan_id || "—"}</Badge>
-                    </TableCell>
-                    <TableCell>{formatDate(sub.datetime)}</TableCell>
-                    <TableCell>
-                      {formatAmount(sub.final_amount, region)}
-                    </TableCell>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("email")}
+                      >
+                        Email <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("plan_id")}
+                      >
+                        Plan ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("datetime")}
+                      >
+                        Latest Payment <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort("final_amount")}
+                      >
+                        Amount <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
                   </TableRow>
+                </TableHeader>
 
-                  {/* Expanded Transactions */}
-                  {expandedRows.has(sub.email) && (
-                    <TableRow>
-                      <TableCell colSpan={6}>
-                        <div className="pl-10 py-4">
-                          {getUserTransactions(sub.email).length === 0 ? (
-                            <p className="text-sm text-muted-foreground">
-                              No transaction history
-                            </p>
-                          ) : (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Plan ID</TableHead>
-                                  <TableHead>Amount</TableHead>
-                                  <TableHead>Date</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {getUserTransactions(sub.email).map(
-                                  (txn, i) => (
-                                    <TableRow key={i}>
-                                      <TableCell>
-                                        <Badge variant="outline">
-                                          {txn.plan_id || "—"}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell>
-                                        {formatAmount(txn.final_amount, region)}
-                                      </TableCell>
-                                      <TableCell>
-                                        {formatDate(txn.datetime)}
-                                      </TableCell>
+                <TableBody>
+                  {data.map((sub) => (
+                    <React.Fragment key={sub.email}>
+                      {/* Main Row */}
+                      <TableRow>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => toggleRow(sub.email)}
+                          >
+                            {expandedRows.has(sub.email) ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell>{sub.username || "—"}</TableCell>
+                        <TableCell>{sub.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sub.plan_id || "—"}</Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(sub.datetime)}</TableCell>
+                        <TableCell>
+                          {formatAmount(sub.final_amount, region)}
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Expanded transaction history */}
+                      {expandedRows.has(sub.email) && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="bg-muted/30">
+                            <div className="p-6">
+                              {getUserTransactions(sub.email).length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  No transaction history
+                                </p>
+                              ) : (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Plan ID</TableHead>
+                                      <TableHead>Amount</TableHead>
+                                      <TableHead>Date</TableHead>
                                     </TableRow>
-                                  )
-                                )}
-                              </TableBody>
-                            </Table>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {getUserTransactions(sub.email).map(
+                                      (txn, i) => (
+                                        <TableRow key={i}>
+                                          <TableCell>
+                                            <Badge variant="outline">
+                                              {txn.plan_id || "—"}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            {formatAmount(
+                                              txn.final_amount,
+                                              region
+                                            )}
+                                          </TableCell>
+                                          <TableCell>
+                                            {formatDate(txn.datetime)}
+                                          </TableCell>
+                                        </TableRow>
+                                      )
+                                    )}
+                                  </TableBody>
+                                </Table>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 
   return (
