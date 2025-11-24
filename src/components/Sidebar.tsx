@@ -4,14 +4,13 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import {
+  Activity,
   ChevronLeft,
   ChevronRight,
-  LayoutDashboard,
-  Users,
-  Shield,
-  Mail,
   CreditCard,
+  LayoutDashboard,
   LogOut,
+  Users,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -36,6 +35,7 @@ export default function Sidebar({
     User: <Users className="h-5 w-5" />,
     Subscriptions: <CreditCard className="h-5 w-5" />,
     Transaction: <CreditCard className="h-5 w-5" />,
+    "Health Monitor": <Activity className="h-5 w-5" />,
     "Log Out": <LogOut className="h-5 w-5" />,
   };
 
@@ -44,6 +44,7 @@ export default function Sidebar({
     { label: "User", href: "/dashboard/users" },
     { label: "Subscriptions", href: "/dashboard/billing" },
     { label: "Transaction", href: "/dashboard/transaction" },
+    { label: "Health Monitor", href: "/dashboard/health-checks" },
   ];
 
   const handleLogout = () => {
