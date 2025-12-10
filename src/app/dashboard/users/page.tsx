@@ -47,6 +47,7 @@ import {
   Trash2,
   Copy,
   Search,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import clsx from "clsx";
@@ -71,11 +72,12 @@ export default function UsersPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -124,32 +126,63 @@ export default function UsersPage() {
     user_plan_active: !!u.user_plan_active,
   });
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchUsers = async (isSearch = false) => {
+    if (isSearch) {
+      setIsSearching(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      const res = await fetch(`/api/users?page=1&limit=50000`, {
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pageSize.toString(),
+      });
+
+      if (filterText.trim()) {
+        params.append("search", filterText.trim());
+      }
+
+      const res = await fetch(`/api/users?${params.toString()}`, {
         cache: "no-store",
       });
       if (!res.ok) throw new Error("Failed to fetch");
+      
       const data = await res.json();
       const normalized = (data.users || []).map(normalizeUser);
-      setAllUsers(normalized);
-      setFilteredUsers(normalized);
-      setTotalUsers(normalized.length);
+      
+      setUsers(normalized);
+      setTotalUsers(data.total || 0);
+      setTotalPages(data.totalPages || 1);
     } catch (err) {
       toast.error("Failed to load users");
     } finally {
-      setLoading(false);
+      if (isSearch) {
+        setIsSearching(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset to page 1 when search changes
+      fetchUsers(true); // Pass true to indicate this is a search operation
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filterText]);
+
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage, pageSize]);
 
-  // Filtering & Sorting
-  useEffect(() => {
-    let filtered = [...allUsers];
+  // Client-side filtering for region and status (since API doesn't support these yet)
+  const filteredUsers = useMemo(() => {
+    let filtered = [...users];
 
     if (regionFilter !== "total") {
       filtered = filtered.filter((u) => u.region === regionFilter);
@@ -160,25 +193,7 @@ export default function UsersPage() {
       filtered = filtered.filter((u) => getStatus(u) === statusFilter);
     }
 
-    // Text search
-    if (filterText.trim()) {
-      const term = filterText.toLowerCase();
-      filtered = filtered.filter((u) => {
-        const name = `${u.first_name ?? ""} ${u.last_name ?? ""}`.toLowerCase();
-        const email = (u.email || "").toLowerCase();
-        const phone = (u.phone_num || "").toLowerCase();
-        const id = String(u.id);
-        const mdr = String(u.mdr_id ?? "");
-        return (
-          name.includes(term) ||
-          email.includes(term) ||
-          phone.includes(term) ||
-          id.includes(term) ||
-          mdr.includes(term)
-        );
-      });
-    }
-
+    // Client-side sorting
     if (sortConfig) {
       filtered.sort((a, b) => {
         let aVal: any = "";
@@ -207,10 +222,8 @@ export default function UsersPage() {
       });
     }
 
-    setFilteredUsers(filtered);
-    setTotalUsers(filtered.length);
-    setCurrentPage(1);
-  }, [allUsers, filterText, sortConfig, regionFilter, statusFilter]); // always 5 items
+    return filtered;
+  }, [users, regionFilter, statusFilter, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) =>
@@ -222,11 +235,7 @@ export default function UsersPage() {
     );
   };
 
-  const totalPages = Math.ceil(totalUsers / pageSize) || 1;
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  const paginatedUsers = filteredUsers;
 
   const isAllSelected =
     paginatedUsers.length > 0 &&
@@ -245,14 +254,30 @@ export default function UsersPage() {
     );
   };
 
-  const handleResetPassword = (user: User) => {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-    const link = `${baseUrl}/reset-password?token=${user.id}-${Date.now()}&id=${
-      user.id
-    }`;
-    setResetLink(link);
+  const handleResetPassword = async (user: User) => {
     setUserToReset(user);
     setResetPasswordDialogOpen(true);
+
+    try {
+      const res = await fetch("/api/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          region: user.region,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Failed");
+
+      toast.success("Password reset & email sent successfully!");
+      setResetLink("");
+    } catch (err: any) {
+      toast.error(err.message || "Reset failed");
+      setResetPasswordDialogOpen(false);
+    }
   };
 
   const handleCopyLink = async () => {
@@ -288,13 +313,17 @@ export default function UsersPage() {
               <CardHeader className="pb-4">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center flex-wrap">
                   <div className="relative w-full sm:w-80">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    {isSearching ? (
+                      <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
+                    ) : (
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
                     <Input
                       placeholder="Search users..."
                       value={filterText}
                       onChange={(e) => setFilterText(e.target.value)}
                       className="pl-10"
-                      disabled={loading}
+                      disabled={loading && !isSearching}
                     />
                   </div>
 
@@ -495,9 +524,12 @@ export default function UsersPage() {
                                     className="bg-background border shadow-lg"
                                   >
                                     <DropdownMenuItem
-                                      onClick={() => handleResetPassword(user)}
+                                      onClick={() => {
+                                        setUserToReset(user);
+                                        setResetPasswordDialogOpen(true);
+                                      }}
                                     >
-                                      <RotateCcw className="mr-2 h-4 w-4" />{" "}
+                                      <RotateCcw className="mr-2 h-4 w-4" />
                                       Reset Password
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
@@ -604,34 +636,59 @@ export default function UsersPage() {
           open={resetPasswordDialogOpen}
           onOpenChange={setResetPasswordDialogOpen}
         >
-          <DialogContent className="sm:max-w-2xl">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Reset Password Link</DialogTitle>
+              <DialogTitle>Password Reset</DialogTitle>
               <DialogDescription>
-                Send this secure reset link to the user
+                Are you sure you want to reset this user's password? The new
+                password will be emailed to them.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center gap-3">
-                <Input
-                  value={resetLink}
-                  readOnly
-                  className="flex-1 font-mono text-sm"
-                />
-                <Button onClick={handleCopyLink} size="sm">
-                  <Copy className="h-4 w-4 mr-2" /> Copy
-                </Button>
-              </div>
-              {userToReset && (
-                <p className="text-sm text-muted-foreground">
-                  For:{" "}
-                  <strong>
-                    {userToReset.first_name} {userToReset.last_name}
-                  </strong>{" "}
-                  ({userToReset.email || userToReset.phone_num})
-                </p>
-              )}
-            </div>
+
+            {userToReset && (
+              <p className="py-4 text-sm text-muted-foreground">
+                User:{" "}
+                <strong>
+                  {userToReset.first_name} {userToReset.last_name}
+                </strong>{" "}
+                ({userToReset.email})
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setResetPasswordDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  if (!userToReset) return;
+
+                  try {
+                    const res = await fetch("/api/users/reset-password", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        email: userToReset.email,
+                        region: userToReset.region,
+                      }),
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message || "Failed");
+
+                    toast.success("Password reset & email sent successfully!");
+                    setResetPasswordDialogOpen(false);
+                  } catch (err: any) {
+                    toast.error(err.message || "Reset failed");
+                  }
+                }}
+              >
+                Confirm Reset
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -669,14 +726,13 @@ export default function UsersPage() {
               <Button
                 variant="destructive"
                 onClick={() => {
-                  setAllUsers((prev) =>
-                    prev.filter((u) => u.id !== userToDelete?.id)
-                  );
-                  setFilteredUsers((prev) =>
+                  setUsers((prev) =>
                     prev.filter((u) => u.id !== userToDelete?.id)
                   );
                   toast.success("User deleted");
                   setDeleteDialogOpen(false);
+                  // Refetch to ensure consistency
+                  fetchUsers();
                 }}
               >
                 Delete User
