@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   Users,
+  Ticket,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -36,6 +37,7 @@ export default function Sidebar({
     Subscriptions: <CreditCard className="h-5 w-5" />,
     Transaction: <CreditCard className="h-5 w-5" />,
     "Health Monitor": <Activity className="h-5 w-5" />,
+    Coupon: <Ticket className="h-5 w-5" />,
     "Log Out": <LogOut className="h-5 w-5" />,
   };
 
@@ -45,6 +47,7 @@ export default function Sidebar({
     { label: "Subscriptions", href: "/dashboard/billing" },
     { label: "Transaction", href: "/dashboard/transaction" },
     { label: "Health Monitor", href: "/dashboard/health-checks" },
+    { label: "Coupon", href: "/dashboard/coupon" },
   ];
 
   const handleLogout = () => {
