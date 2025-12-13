@@ -4,10 +4,10 @@ import { prismaIndia, prismaUSA } from "@/lib/prisma";
 // GET - Fetch a specific plan by plan_id
 export async function GET(
     req: NextRequest,
-    { params }: { params: { plan_id: string } }
-) {
+    { params }: { params: Promise<{ plan_id: string }> }
+){
     try {
-        const { plan_id } = params;
+        const { plan_id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 
@@ -53,10 +53,10 @@ export async function GET(
 // PUT - Update a plan
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { plan_id: string } }
+    { params }: { params: Promise<{ plan_id: string }> }
 ) {
     try {
-        const { plan_id } = params;
+        const { plan_id } = await params;
         const body = await req.json();
         const {
             amount,
@@ -185,10 +185,10 @@ export async function PUT(
 // DELETE - Delete a plan
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { plan_id: string } }
+    { params }: { params: Promise<{ plan_id: string }> }
 ) {
     try {
-        const { plan_id } = params;
+        const { plan_id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 

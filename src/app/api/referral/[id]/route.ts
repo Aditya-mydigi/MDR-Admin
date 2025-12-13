@@ -4,10 +4,10 @@ import { prismaIndia, prismaUSA } from "@/lib/prisma";
 // GET - Fetch a specific referral code by ID
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 
@@ -53,10 +53,10 @@ export async function GET(
 // PUT - Update a referral code
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const body = await req.json();
         const {
             referral_code,
@@ -237,10 +237,10 @@ export async function PUT(
 // DELETE - Delete a referral code
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 
