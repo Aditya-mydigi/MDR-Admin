@@ -4,10 +4,10 @@ import { prismaIndia, prismaUSA } from "@/lib/prisma";
 // GET - Fetch a specific coupon by ID
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }  // ← Changed here
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 
@@ -53,10 +53,10 @@ export async function GET(
 // PUT - Update a coupon
 export async function PUT(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }  // ← Changed here
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const body = await req.json();
         const {
             coupon_code,
@@ -240,10 +240,10 @@ export async function PUT(
 // DELETE - Delete a coupon
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id } = params;
+        const { id } = await params;
         const { searchParams } = new URL(req.url);
         const region = searchParams.get("region") || "india";
 
