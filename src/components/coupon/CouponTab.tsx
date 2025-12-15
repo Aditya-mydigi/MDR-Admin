@@ -172,7 +172,9 @@ export default function CouponTab() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {coupon.type === "new"
                       ? `${coupon.amount}%`
-                      : `$${coupon.amount}`}
+                      : region === "india"
+                        ? `₹${coupon.amount}`
+                        : `$${coupon.amount}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {coupon.used_count}

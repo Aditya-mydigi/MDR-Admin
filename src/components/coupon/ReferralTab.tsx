@@ -86,6 +86,9 @@ export default function ReferralTab() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchReferralCodes();
@@ -164,11 +167,12 @@ export default function ReferralTab() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this referral code?")) return;
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/referral/${id}`, {
+      const response = await fetch(`/api/referral/${deleteId}`, {
         method: "DELETE",
       });
 
@@ -177,12 +181,16 @@ export default function ReferralTab() {
       if (response.ok && data.success) {
         toast.success(data.message);
         fetchReferralCodes();
+        setDeleteDialogOpen(false);
+        setDeleteId(null);
       } else {
         toast.error(data.error || "Failed to delete");
       }
     } catch (error) {
       console.error("Error deleting:", error);
       toast.error("Failed to delete referral code");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -405,7 +413,10 @@ export default function ReferralTab() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleDelete(code.id)}
+                            onClick={() => {
+                              setDeleteId(code.id);
+                              setDeleteDialogOpen(true);
+                            }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -441,6 +452,39 @@ export default function ReferralTab() {
           )}
         </>
       )}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this referral code? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
