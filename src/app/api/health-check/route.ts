@@ -17,6 +17,7 @@ const BASE_URLS: Record<EnvironmentKey, string> = {
 type HealthRequestPayload = {
   path?: string;
   env?: EnvironmentKey;
+  url?: string; // ← NEW: allow full URL override
 };
 
 type HealthResponsePayload = {
@@ -31,26 +32,39 @@ type HealthResponsePayload = {
 };
 
 export async function POST(request: Request) {
-  const { path, env = "dev" } = (await request.json()) as HealthRequestPayload;
+  const payload = (await request.json()) as HealthRequestPayload;
 
-  if (!path) {
-    return NextResponse.json({ error: "Missing path" }, { status: 400 });
+  let targetUrl: string;
+
+  // Priority 1: If full `url` is provided, use it directly (for MDR Pro, etc.)
+  if (payload.url) {
+    targetUrl = payload.url;
+  }
+  // Priority 2: Otherwise, build from path + env (backward compatible)
+  else if (payload.path && payload.env) {
+    const baseUrl = BASE_URLS[payload.env];
+    if (!baseUrl) {
+      return NextResponse.json(
+        { error: `Unsupported environment: ${payload.env}` },
+        { status: 400 }
+      );
+    }
+    const normalizedPath = payload.path.startsWith("/") ? payload.path : `/${payload.path}`;
+    targetUrl = `${baseUrl}${normalizedPath}`;
+  } else {
+    return NextResponse.json(
+      { error: "Missing required fields: either 'url' or both 'path' and 'env'" },
+      { status: 400 }
+    );
   }
 
-  const baseUrl = BASE_URLS[env];
-  if (!baseUrl) {
-    return NextResponse.json({ error: `Unsupported environment: ${env}` }, { status: 400 });
-  }
-
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${baseUrl}${normalizedPath}`;
   const startedAt = Date.now();
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(url, {
+    const response = await fetch(targetUrl, {
       cache: "no-store",
       signal: controller.signal,
     });
@@ -75,7 +89,7 @@ export async function POST(request: Request) {
       lastChecked: Date.now(),
       details: parsedBody,
       rawBody,
-      url,
+      url: targetUrl,
     };
 
     if (response.ok) {
@@ -109,8 +123,7 @@ export async function POST(request: Request) {
       latency,
       lastChecked: Date.now(),
       error: errorMessage,
-      url,
+      url: targetUrl,
     });
   }
 }
-

@@ -186,6 +186,19 @@ const SERVICE_CATALOG: HealthService[] = [
       { id: "mdr-ai-global", label: "Global", path: "/mdr-ai/api/us/health" },
     ],
   },
+  {
+  id: "mdr-pro",
+  name: "MDR Pro (HIMs)",
+  description: "Hospital Information Management System backend.",
+  endpoints: [
+    {
+      id: "mdr-pro-in",
+      label: "India",
+      path: "/hims-backend/api/health", // only used as fallback/display
+      region: "IN",
+    },
+  ],
+},
 ];
 
 const statusStyles: Record<
@@ -255,34 +268,62 @@ export default function HealthChecksPage() {
   }, []);
 
   const fetchHealth = useCallback(
-    async (endpoint: ServiceEndpoint, env: EnvironmentKey): Promise<EndpointStatus> => {
+  async (endpoint: ServiceEndpoint, env: EnvironmentKey): Promise<EndpointStatus> => {
+    // Special case for MDR Pro
+    if (endpoint.id === "mdr-pro-in") {
+      const fullUrl =
+        env === "dev"
+          ? "https://dev-mdr-in.mydigirecords.com/v1/hims-backend/api/health"
+          : "https://prod-mdr-in.mydigirecords.com/v1/hims-backend/api/health"; // adjust prod if needed
+
       const response = await fetch("/api/health-check", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          path: endpoint.path,
-          env,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: fullUrl }),
       });
 
+      // ... same error/response handling as before
       if (!response.ok) {
         const errorMessage = await response.text();
         return {
           status: "down",
           latency: null,
           lastChecked: Date.now(),
-          error: errorMessage || "Health check proxy error",
-          url: `${BASE_URLS[env]}${endpoint.path}`,
+          error: errorMessage || "Health check failed",
+          url: fullUrl,
         };
       }
 
-      const payload = (await response.json()) as EndpointStatus;
-      return payload;
-    },
-    []
-  );
+      const payload = await response.json();
+      return payload as EndpointStatus;
+    }
+
+    // All other endpoints: use existing path + env logic
+    const response = await fetch("/api/health-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        path: endpoint.path,
+        env,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      return {
+        status: "down",
+        latency: null,
+        lastChecked: Date.now(),
+        error: errorMessage || "Health check proxy error",
+        url: `${BASE_URLS[env]}${endpoint.path}`,
+      };
+    }
+
+    const payload = (await response.json()) as EndpointStatus;
+    return payload;
+  },
+  []
+);
 
   const refreshEndpoint = useCallback(
     async (endpoint: ServiceEndpoint) => {
