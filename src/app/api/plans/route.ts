@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
             data: plans,
         });
     } catch (error) {
-        console.error("❌ Error fetching plans:", error);
+        console.error(" Error fetching plans:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        console.log(`✅ Plan created successfully: ${plan_id}`);
+        console.log(` Plan created successfully: ${plan_id}`);
 
         return NextResponse.json(
             {
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error("❌ Error creating plan:", error);
+        console.error(" Error creating plan:", error);
 
         // Handle unique constraint violation
         if (error.code === "P2002") {

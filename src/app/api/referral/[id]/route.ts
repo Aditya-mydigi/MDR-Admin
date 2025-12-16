@@ -42,7 +42,7 @@ export async function GET(
             data: referralCode,
         });
     } catch (error) {
-        console.error("❌ Error fetching referral code:", error);
+        console.error(" Error fetching referral code:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }
@@ -209,7 +209,7 @@ export async function PUT(
             });
         }
 
-        console.log(`✅ Referral code updated successfully: ${id}`);
+        console.log(` Referral code updated successfully: ${id}`);
 
         return NextResponse.json({
             success: true,
@@ -217,7 +217,7 @@ export async function PUT(
             data: updatedReferralCode,
         });
     } catch (error: any) {
-        console.error("❌ Error updating referral code:", error);
+        console.error(" Error updating referral code:", error);
 
         // Handle unique constraint violation
         if (error.code === "P2002") {
@@ -281,14 +281,14 @@ export async function DELETE(
             });
         }
 
-        console.log(`✅ Referral code deleted successfully: ${id}`);
+        console.log(` Referral code deleted successfully: ${id}`);
 
         return NextResponse.json({
             success: true,
             message: "Referral code deleted successfully",
         });
     } catch (error) {
-        console.error("❌ Error deleting referral code:", error);
+        console.error(" Error deleting referral code:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

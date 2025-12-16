@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
             data: referralCodes,
         });
     } catch (error) {
-        console.error("❌ Error fetching referral codes:", error);
+        console.error(" Error fetching referral codes:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        console.log(`✅ Referral code created successfully: ${referral_code.trim()}`);
+        console.log(` Referral code created successfully: ${referral_code.trim()}`);
 
         return NextResponse.json(
             {
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error("❌ Error creating referral code:", error);
+        console.error(" Error creating referral code:", error);
 
         // Handle unique constraint violation
         if (error.code === "P2002") {

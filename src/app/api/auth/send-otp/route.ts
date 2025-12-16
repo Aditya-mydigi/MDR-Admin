@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized email" }, { status: 403 });
     }
 
-    // 🔥 Now use generateAndSendOtp (this creates OTP, emails it, AND returns JWT)
+    //  Now use generateAndSendOtp (this creates OTP, emails it, AND returns JWT)
     const result = await generateAndSendOtp(lower, "Admin");
 
     if (!result.success) {

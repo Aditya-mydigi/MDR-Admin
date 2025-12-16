@@ -3,7 +3,7 @@ import { prismaIndia, prismaUSA } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    console.log("📊 Calculating total revenue for India and USA...");
+    console.log(" Calculating total revenue for India and USA...");
 
     // Run both queries in parallel
     const [indiaRevenueResult, usaRevenueResult] = await Promise.all([
@@ -12,7 +12,7 @@ export async function GET() {
           final_amount: true,
         },
         where: {
-          payment_status: "SUCCESS", // ✅ optional filter if you track status
+          payment_status: "SUCCESS", //  optional filter if you track status
         },
       }),
       prismaUSA.payment_records.aggregate({
@@ -20,7 +20,7 @@ export async function GET() {
           final_amount: true,
         },
         where: {
-          payment_status: "SUCCESS", // ✅ same filter
+          payment_status: "SUCCESS", //  same filter
         },
       }),
     ]);
@@ -30,7 +30,7 @@ export async function GET() {
     const usaRevenue = Number(usaRevenueResult._sum.final_amount || 0);
     const totalRevenue = indiaRevenue + usaRevenue;
 
-    console.log(`✅ India: ₹${indiaRevenue}, USA: $${usaRevenue}`);
+    console.log(` India: ₹${indiaRevenue}, USA: $${usaRevenue}`);
 
     return NextResponse.json({
       success: true,
@@ -39,7 +39,7 @@ export async function GET() {
       totalRevenue,
     });
   } catch (error) {
-    console.error("❌ Error calculating revenue:", error);
+    console.error(" Error calculating revenue:", error);
     return NextResponse.json(
       { success: false, error: "Failed to calculate revenue" },
       { status: 500 }

@@ -42,7 +42,7 @@ export async function GET(
             data: coupon,
         });
     } catch (error) {
-        console.error("❌ Error fetching coupon:", error);
+        console.error(" Error fetching coupon:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }
@@ -220,7 +220,7 @@ export async function PUT(
             });
         }
 
-        console.log(`✅ Coupon updated successfully: ${id}`);
+        console.log(` Coupon updated successfully: ${id}`);
 
         return NextResponse.json({
             success: true,
@@ -228,7 +228,7 @@ export async function PUT(
             data: updatedCoupon,
         });
     } catch (error: any) {
-        console.error("❌ Error updating coupon:", error);
+        console.error(" Error updating coupon:", error);
 
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
@@ -284,14 +284,14 @@ export async function DELETE(
             });
         }
 
-        console.log(`✅ Coupon deleted successfully: ${id}`);
+        console.log(` Coupon deleted successfully: ${id}`);
 
         return NextResponse.json({
             success: true,
             message: "Coupon deleted successfully",
         });
     } catch (error) {
-        console.error("❌ Error deleting coupon:", error);
+        console.error(" Error deleting coupon:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

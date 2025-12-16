@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
             data: plans,
         });
     } catch (error) {
-        console.error("❌ Error fetching plans for users:", error);
+        console.error(" Error fetching plans for users:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }

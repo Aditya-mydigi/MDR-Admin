@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
             data: coupons,
         });
     } catch (error) {
-        console.error("❌ Error fetching coupons:", error);
+        console.error(" Error fetching coupons:", error);
         return NextResponse.json(
             { success: false, error: "Internal Server Error" },
             { status: 500 }
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        console.log(`✅ Coupon created successfully: ${coupon_code}`);
+        console.log(` Coupon created successfully: ${coupon_code}`);
 
         return NextResponse.json(
             {
@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error("❌ Error creating coupon:", error);
+        console.error(" Error creating coupon:", error);
 
         // Handle unique constraint violation
         if (error.code === "P2002") {
