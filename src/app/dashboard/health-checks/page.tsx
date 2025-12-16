@@ -178,6 +178,14 @@ const SERVICE_CATALOG: HealthService[] = [
       { id: "vaccines-in", label: "India", path: "/vaccines-mydig-api/api/in/health", region: "IN" },
     ],
   },
+  {
+    id: "mdr-ai",
+    name: "MDR AI",
+    description: "AI-powered health services.",
+    endpoints: [
+      { id: "mdr-ai-global", label: "Global", path: "/mdr-ai/api/us/health" },
+    ],
+  },
 ];
 
 const statusStyles: Record<
