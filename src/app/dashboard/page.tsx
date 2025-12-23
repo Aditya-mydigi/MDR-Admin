@@ -419,27 +419,55 @@ export default function DashboardPage() {
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           sidebarCollapsed={sidebarCollapsed}
         />
-        <main className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
-          {/* Toggle Buttons */}
-          <div className="flex gap-4 mb-4">
-            <Button
-              variant={region === "Total" ? "default" : "outline"}
+        <main className="flex-1 overflow-y-auto p-8 space-y-8 bg-[#f8fafc]">
+          {/* Welcome Banner */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0a3a7a] to-[#02b8f2] p-8 text-white shadow-xl shadow-[#0a3a7a]/10">
+            <div className="relative z-10">
+              <h2 className="text-3xl font-bold tracking-tight mb-2">Welcome Back, Admin!</h2>
+              <p className="text-white/80 max-w-xl">
+                Here's what's happening across India and USA today. Track metrics, manage users, and monitor system health from one central hub.
+              </p>
+            </div>
+            {/* Decorative background circles */}
+            <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-[-20%] left-[20%] w-48 h-48 bg-white/5 rounded-full blur-2xl" />
+          </div>
+
+          {/* Region Toggle Buttons */}
+          <div className="flex items-center gap-1 p-1 bg-white border border-gray-100 rounded-2xl w-fit shadow-sm">
+            <button
               onClick={() => setRegion("Total")}
+              className={clsx(
+                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                region === "Total" 
+                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              )}
             >
-              Total
-            </Button>
-            <Button
-              variant={region === "India" ? "default" : "outline"}
+              Total Oversight
+            </button>
+            <button
               onClick={() => setRegion("India")}
+              className={clsx(
+                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                region === "India" 
+                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              )}
             >
-              India
-            </Button>
-            <Button
-              variant={region === "USA" ? "default" : "outline"}
+              India Region
+            </button>
+            <button
               onClick={() => setRegion("USA")}
+              className={clsx(
+                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                region === "USA" 
+                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+              )}
             >
-              USA
-            </Button>
+              USA Region
+            </button>
           </div>
           {/* Six KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
