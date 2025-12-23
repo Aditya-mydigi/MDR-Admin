@@ -9,6 +9,9 @@ export async function GET(request: Request) {
     const skip = (page - 1) * limit;
 
     const search = searchParams.get("search")?.trim() || "";
+    const status = searchParams.get("status"); // Active, Inactive, Expired
+    const region = searchParams.get("region")?.toLowerCase(); // india, usa
+
     const bloodGroupsParam = searchParams.get("blood_groups");
     const bloodGroups =
       bloodGroupsParam && bloodGroupsParam.length > 0
@@ -16,9 +19,7 @@ export async function GET(request: Request) {
         : [];
 
     console.log(
-      `📄 Fetching users (page=${page}, limit=${limit}, search="${search}", blood_groups=${bloodGroups.join(
-        ","
-      )})`
+      `📄 Fetching users (page=${page}, limit=${limit}, search="${search}", status="${status}", region="${region}")`
     );
 
     // ✅ Dynamic filters for both DBs
@@ -38,70 +39,100 @@ export async function GET(request: Request) {
       whereClause.blood_group = { in: bloodGroups };
     }
 
-    const [indiaUsers, usaUsers, indiaCount, usaCount] = await Promise.all([
-      prismaIndia.users
-        .findMany({
+    // Status Filtering Logic
+    const now = new Date();
+    if (status === "Inactive") {
+      whereClause.user_plan_active = false;
+    } else if (status === "Expired") {
+      whereClause.user_plan_active = true;
+      whereClause.expiry_date = { lt: now };
+    } else if (status === "Active") {
+      whereClause.user_plan_active = true;
+      whereClause.OR = [
+        { expiry_date: { gte: now } },
+        { expiry_date: null },
+      ];
+      // Note: Re-integrating search OR clause if it exists is tricky with Prisma's top-level OR.
+      // If search exists, we need to be careful not to overwrite the OR.
+      // Prisma doesn't support implicit AND between top-level ORs easily without AND: [].
+      if (search) {
+        // We need to restructure to use AND for the status+search combination
+        const searchOR = [
+          { first_name: { contains: search, mode: "insensitive" } },
+          { last_name: { contains: search, mode: "insensitive" } },
+          { email: { contains: search, mode: "insensitive" } },
+          { phone_num: { contains: search, mode: "insensitive" } },
+          { blood_group: { contains: search, mode: "insensitive" } },
+        ];
+
+        whereClause.AND = [
+          { OR: searchOR },
+          {
+            OR: [
+              { expiry_date: { gte: now } },
+              { expiry_date: null },
+            ]
+          }
+        ];
+        delete whereClause.OR; // Remove the top-level OR we added earlier
+      }
+    }
+
+    // Select fields to return
+    const selectFields = {
+      id: true,
+      mdr_id: true,
+      first_name: true,
+      last_name: true,
+      email: true,
+      phone_num: true,
+      gender: true,
+      dob: true,
+      created_at: true,
+      user_plan_active: true,
+      blood_group: true,
+      address: true,
+      plan_id: true,
+      payment_date: true,
+      expiry_date: true,
+      country: true,
+    };
+
+    let indiaUsers: any[] = [];
+    let usaUsers: any[] = [];
+    let indiaCount = 0;
+    let usaCount = 0;
+
+    // Execute queries based on region filter
+    const promises = [];
+
+    if (!region || region === "total" || region === "india") {
+      promises.push(
+        prismaIndia.users.findMany({
           skip,
           take: limit,
           where: whereClause,
-          select: {
-            id: true,
-            mdr_id: true,
-            first_name: true,
-            last_name: true,
-            email: true,
-            phone_num: true, // ✅ include mobile number
-            gender: true,
-            dob: true,
-            created_at: true,
-            user_plan_active: true,
-            blood_group: true,
-            address: true,
-            plan_id: true,
-            payment_date: true,
-            expiry_date: true,
-            country: true,
-          },
+          select: selectFields,
           orderBy: { created_at: "desc" },
-        })
-        .catch((err) => {
-          console.error("India users fetch failed:", err);
-          return [];
-        }),
+        }).then(res => indiaUsers = res).catch(e => console.error("India fetch failed", e)),
+        prismaIndia.users.count({ where: whereClause }).then(c => indiaCount = c).catch(() => 0)
+      );
+    }
 
-      prismaUSA.users
-        .findMany({
+    if (!region || region === "total" || region === "usa") {
+      promises.push(
+        prismaUSA.users.findMany({
           skip,
           take: limit,
           where: whereClause,
-          select: {
-            id: true,
-            mdr_id: true,
-            first_name: true,
-            last_name: true,
-            email: true,
-            phone_num: true, // ✅ include mobile number
-            gender: true,
-            dob: true,
-            created_at: true,
-            user_plan_active: true,
-            blood_group: true,
-            address: true,
-            plan_id: true,
-            payment_date: true,
-            expiry_date: true,
-            country: true,
-          },
+          select: selectFields,
           orderBy: { created_at: "desc" },
-        })
-        .catch((err) => {
-          console.error("USA users fetch failed:", err);
-          return [];
-        }),
+        }).then(res => usaUsers = res).catch(e => console.error("USA fetch failed", e)),
+        prismaUSA.users.count({ where: whereClause }).then(c => usaCount = c).catch(() => 0)
+      );
+    }
 
-      prismaIndia.users.count({ where: whereClause }).catch(() => 0),
-      prismaUSA.users.count({ where: whereClause }).catch(() => 0),
-    ]);
+    await Promise.all(promises);
 
     const allUsers = [
       ...indiaUsers.map((u) => ({ ...u, region: "India" })),
@@ -110,8 +141,6 @@ export async function GET(request: Request) {
 
     const total = indiaCount + usaCount;
     const totalPages = Math.ceil(total / limit);
-
-    console.log(`✅ Page ${page} fetched (${allUsers.length} users)`);
 
     return NextResponse.json({
       success: true,

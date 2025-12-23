@@ -28,6 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {Switch} from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -143,6 +144,14 @@ export default function UsersPage() {
       if (filterText.trim()) {
         params.append("search", filterText.trim());
       }
+      
+      if (statusFilter !== "all") {
+        params.append("status", statusFilter);
+      }
+
+      if (regionFilter !== "total") {
+        params.append("region", regionFilter);
+      }
 
       const res = await fetch(`/api/users?${params.toString()}`, {
         cache: "no-store",
@@ -176,22 +185,24 @@ export default function UsersPage() {
     return () => clearTimeout(timer);
   }, [filterText]);
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    // We don't call fetchUsers here because the next effect will catch the state change
+    // providing we include statusFilter and regionFilter in its dependency array
+    // BUT to avoid double firing or missing firing if page is already 1, 
+    // we can simplifiy by adding them to the dependency array of the main fetch effect.
+  }, [statusFilter, regionFilter]);
+
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, statusFilter, regionFilter]);
 
-  // Client-side filtering for region and status (since API doesn't support these yet)
+  // Client-side filtering for region and status REMOVED (now handled by API)
+  // We kept sorting here if needed, or strictly rely on API order.
+  // The API returns mixed results from 2 DBs, so client-side sorting of the *page* is still useful.
   const filteredUsers = useMemo(() => {
     let filtered = [...users];
-
-    if (regionFilter !== "total") {
-      filtered = filtered.filter((u) => u.region === regionFilter);
-    }
-
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((u) => getStatus(u) === statusFilter);
-    }
 
     // Client-side sorting
     if (sortConfig) {
@@ -211,10 +222,7 @@ export default function UsersPage() {
             aVal = a.email ?? "";
             bVal = b.email ?? "";
             break;
-          case "status":
-            aVal = getStatus(a);
-            bVal = getStatus(b);
-            break;
+
         }
         if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
@@ -223,7 +231,7 @@ export default function UsersPage() {
     }
 
     return filtered;
-  }, [users, regionFilter, statusFilter, sortConfig]);
+  }, [users, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) =>
@@ -408,14 +416,9 @@ export default function UsersPage() {
                             Email/Phone <ArrowUpDown className="ml-2 h-4 w-4" />
                           </Button>
                         </TableHead>
-                        <TableHead>
-                          <Button
-                            variant="ghost"
-                            onClick={() => handleSort("status")}
-                            className="font-medium"
-                          >
-                            Status <ArrowUpDown className="ml-2 h-4 w-4" />
-                          </Button>
+
+                        <TableHead className="text-center">
+                          Subscriptions
                         </TableHead>
                         <TableHead className="w-12" />
                       </TableRow>
@@ -441,12 +444,11 @@ export default function UsersPage() {
                                 <div className="h-3 w-32 bg-muted/60 rounded animate-pulse" />
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
-                            </TableCell>
+
                             <TableCell>
                               <div className="h-8 w-8 bg-muted rounded animate-pulse" />
                             </TableCell>
+                            <TableCell />
                           </TableRow>
                         ))
                       ) : paginatedUsers.length === 0 ? (
@@ -460,7 +462,6 @@ export default function UsersPage() {
                         </TableRow>
                       ) : (
                         paginatedUsers.map((user) => {
-                          const status = getStatus(user);
                           const isSelected = selectedRows.includes(
                             String(user.id)
                           );
@@ -497,20 +498,12 @@ export default function UsersPage() {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <span
-                                  className={clsx(
-                                    "px-2.5 py-1 rounded-full text-xs font-medium",
-                                    status === "Active" &&
-                                      "bg-green-100 text-green-800",
-                                    status === "Inactive" &&
-                                      "bg-red-100 text-red-800",
-                                    status === "Expired" &&
-                                      "bg-gray-100 text-gray-800"
-                                  )}
-                                >
-                                  {status}
-                                </span>
+
+                              <TableCell className="text-center">
+                                <Switch
+                                  checked={user.user_plan_active}
+                                  onCheckedChange={() => {}}
+                                />
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>

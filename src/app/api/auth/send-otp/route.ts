@@ -8,6 +8,7 @@ export const authorizedEmails = [
   "Viren@mydigirecords.com",
   "rahul@mydigirecords.com",
   "Ashley@mydigirecords.com",
+  "manpreet.saini@mydigirecords.com",
 ];
 
 export async function POST(req: Request) {
