@@ -12,7 +12,8 @@ import {
   LogOut,
   Users,
   Ticket,
-} from "lucide-react";
+  Building2,
+} from 'lucide-react';
 
 interface SidebarProps {
   sidebarOpen?: boolean;
@@ -38,6 +39,7 @@ export default function Sidebar({
     Transaction: <CreditCard className="h-5 w-5" />,
     "Health Monitor": <Activity className="h-5 w-5" />,
     Coupon: <Ticket className="h-5 w-5" />,
+    "MDR Org": <Building2 className="h-5 w-5"/>,
     "Log Out": <LogOut className="h-5 w-5" />,
   };
 
@@ -48,6 +50,7 @@ export default function Sidebar({
     { label: "Transaction", href: "/dashboard/transaction" },
     { label: "Health Monitor", href: "/dashboard/health-checks" },
     { label: "Coupon", href: "/dashboard/coupon" },
+    { label: "MDR Org", href: "/dashboard/mdr-org" },
   ];
 
   const handleLogout = () => {

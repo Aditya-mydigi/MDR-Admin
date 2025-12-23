@@ -37,3 +37,6 @@ CREATE TRIGGER trigger_update_mdr_panel_users_updated_at
 BEFORE UPDATE ON public.mdr_panel_users
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+alter table public.mdr_panel_users
+    add isActive BOOLEAN default true not null;

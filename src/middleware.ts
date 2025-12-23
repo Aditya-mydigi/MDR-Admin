@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt, { VerifyErrors } from "jsonwebtoken";
+import { prismaPanel } from "@/lib/prisma-panel";
 
 const JWT_SECRET = process.env.JWT_SECRET || "myultrasecretkey123";
 
@@ -7,8 +8,7 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("session")?.value;
 
-  console.log("Middleware processing:", pathname, "Token present:", !!token); // Debug
-
+  // Allow login and auth routes
   if (pathname.startsWith("/login") || pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
@@ -19,21 +19,35 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    console.log("Token verified, decoded:", decoded); // Debug
+    const decoded = jwt.verify(token, JWT_SECRET) as { email?: string };
+
+    if (!decoded.email) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Check if user exisrs and is admin
+    const user = await prismaPanel.mdrPanelUser.findFirst({
+      where: {
+        email: decoded.email.toLowerCase(),
+        role: "admin",
+        isactive: true,
+      },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
     return NextResponse.next();
   } catch (err) {
     const error = err as VerifyErrors | Error;
-    console.error("Invalid token error:", error.message);
-    if (error.message.includes("edge runtime does not support")) {
-      console.warn("Falling back to bypass due to Edge runtime limitation");
-      return NextResponse.next(); // Temporary bypass for Edge
-    }
+    console.error("Invalid token:", error.message);
     return NextResponse.redirect(new URL("/login", req.url));
   }
 }
 
 export const config = {
   matcher: ["/dashboard/:path*"],
-  runtime: "nodejs", // Remove /api/users to avoid interference
+  runtime: "nodejs",
 };
