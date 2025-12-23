@@ -140,16 +140,13 @@ export default function CouponTab() {
         }
       }
 
-      if (!formData.referral_code) {
-        toast.error("Referral code is required");
-        setSubmitting(false);
-        return;
-      }
-
       const payload = {
         ...formData,
         amount: parseFloat(formData.amount),
-        usage_limit: formData.usage_limit ? parseInt(formData.usage_limit) : undefined,
+        usage_limit: formData.usage_limit
+          ? parseInt(formData.usage_limit)
+          : undefined,
+        referral_code: formData.referral_code || null,
         region,
       };
 
@@ -165,18 +162,30 @@ export default function CouponTab() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        toast.success(editMode ? "Coupon updated successfully" : "Coupon created successfully");
+        toast.success(
+          editMode
+            ? "Coupon updated successfully"
+            : "Coupon created successfully"
+        );
         setCreateDialogOpen(false);
         setFormData(initialFormData);
         setEditMode(false);
         setEditId(null);
         fetchCoupons();
       } else {
-        toast.error(data.error || (editMode ? "Failed to update coupon" : "Failed to create coupon"));
+        toast.error(
+          data.error ||
+            (editMode ? "Failed to update coupon" : "Failed to create coupon")
+        );
       }
     } catch (error) {
-      console.error(editMode ? "Error updating coupon:" : "Error creating coupon:", error);
-      toast.error(editMode ? "Failed to update coupon" : "Failed to create coupon");
+      console.error(
+        editMode ? "Error updating coupon:" : "Error creating coupon:",
+        error
+      );
+      toast.error(
+        editMode ? "Failed to update coupon" : "Failed to create coupon"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -189,8 +198,12 @@ export default function CouponTab() {
       coupon_code: coupon.coupon_code,
       type: coupon.type === "new" ? "percentage" : "fixed",
       amount: coupon.amount.toString(),
-      start_date: coupon.start_date ? new Date(coupon.start_date).toISOString().split("T")[0] : "",
-      end_date: coupon.end_date ? new Date(coupon.end_date).toISOString().split("T")[0] : "",
+      start_date: coupon.start_date
+        ? new Date(coupon.start_date).toISOString().split("T")[0]
+        : "",
+      end_date: coupon.end_date
+        ? new Date(coupon.end_date).toISOString().split("T")[0]
+        : "",
       usage_limit: coupon.usage_limit ? coupon.usage_limit.toString() : "",
       referral_code: coupon.referral_code || "",
       is_active: coupon.is_active,
@@ -204,9 +217,12 @@ export default function CouponTab() {
     setIsDeleting(true);
 
     try {
-      const response = await fetch(`/api/coupons/${deleteId}?region=${region}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/coupons/${deleteId}?region=${region}`,
+        {
+          method: "DELETE",
+        }
+      );
       const data = await response.json();
 
       if (data.success) {
@@ -224,8 +240,6 @@ export default function CouponTab() {
       setIsDeleting(false);
     }
   };
-
-
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
@@ -268,8 +282,8 @@ export default function CouponTab() {
             <option value="india">India</option>
             <option value="usa">USA</option>
           </select>
-          <Dialog 
-            open={createDialogOpen} 
+          <Dialog
+            open={createDialogOpen}
             onOpenChange={(open) => {
               setCreateDialogOpen(open);
               if (!open) {
@@ -287,9 +301,13 @@ export default function CouponTab() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editMode ? "Update Coupon" : "Create New Coupon"}</DialogTitle>
+                <DialogTitle>
+                  {editMode ? "Update Coupon" : "Create New Coupon"}
+                </DialogTitle>
                 <DialogDescription>
-                  {editMode ? "Edit the details of the existing coupon." : "Add a new coupon code to the system."}
+                  {editMode
+                    ? "Edit the details of the existing coupon."
+                    : "Add a new coupon code to the system."}
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateSubmit} className="space-y-4">
@@ -300,7 +318,10 @@ export default function CouponTab() {
                       id="coupon_code"
                       value={formData.coupon_code}
                       onChange={(e) =>
-                        setFormData({ ...formData, coupon_code: e.target.value })
+                        setFormData({
+                          ...formData,
+                          coupon_code: e.target.value,
+                        })
                       }
                       placeholder="e.g. SUMMER2024"
                       required
@@ -318,7 +339,9 @@ export default function CouponTab() {
                       required
                     >
                       <option value="percentage">Percentage (%)</option>
-                      <option value="fixed">Fixed Amount ({region === "india" ? "₹" : "$"})</option>
+                      <option value="fixed">
+                        Fixed Amount ({region === "india" ? "₹" : "$"})
+                      </option>
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -332,7 +355,9 @@ export default function CouponTab() {
                       onChange={(e) =>
                         setFormData({ ...formData, amount: e.target.value })
                       }
-                      placeholder={formData.type === "percentage" ? "10" : "100"}
+                      placeholder={
+                        formData.type === "percentage" ? "10" : "100"
+                      }
                       required
                     />
                   </div>
@@ -344,7 +369,10 @@ export default function CouponTab() {
                       min="1"
                       value={formData.usage_limit}
                       onChange={(e) =>
-                        setFormData({ ...formData, usage_limit: e.target.value })
+                        setFormData({
+                          ...formData,
+                          usage_limit: e.target.value,
+                        })
                       }
                       placeholder="Optional"
                     />
@@ -372,15 +400,19 @@ export default function CouponTab() {
                     />
                   </div>
                   <div className="space-y-2 col-span-2">
-                    <Label htmlFor="referral_code">Referral Code *</Label>
+                    <Label htmlFor="referral_code">
+                      Referral Code (Optional)
+                    </Label>
                     <select
                       id="referral_code"
                       value={formData.referral_code}
                       onChange={(e) =>
-                        setFormData({ ...formData, referral_code: e.target.value })
+                        setFormData({
+                          ...formData,
+                          referral_code: e.target.value,
+                        })
                       }
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      required
                     >
                       <option value="">Select a referral code</option>
                       {referralCodes.map((code) => (
@@ -445,8 +477,10 @@ export default function CouponTab() {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         {editMode ? "Updating..." : "Creating..."}
                       </>
+                    ) : editMode ? (
+                      "Update Coupon"
                     ) : (
-                      editMode ? "Update Coupon" : "Create Coupon"
+                      "Create Coupon"
                     )}
                   </Button>
                 </DialogFooter>
@@ -508,8 +542,8 @@ export default function CouponTab() {
                     {coupon.type === "new"
                       ? `${coupon.amount}%`
                       : region === "india"
-                        ? `₹${coupon.amount}`
-                        : `$${coupon.amount}`}
+                      ? `₹${coupon.amount}`
+                      : `$${coupon.amount}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {coupon.used_count}
@@ -588,13 +622,13 @@ export default function CouponTab() {
         </div>
       </div>
 
-
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this coupon? This action cannot be undone.
+              Are you sure you want to delete this coupon? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
