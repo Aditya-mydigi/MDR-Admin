@@ -293,6 +293,39 @@ export default function UsersPage() {
     toast.success("Reset link copied!");
   };
 
+  const handleToggleSubscription = async (user: User, active: boolean) => {
+    try {
+      // Optimistic update
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id ? { ...u, user_plan_active: active } : u
+        )
+      );
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          region: user.region,
+          active,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update");
+
+      toast.success(data.message || "Subscription updated");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update");
+      // Revert on error
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === user.id ? { ...u, user_plan_active: !active } : u
+        )
+      );
+    }
+  };
+
   return (
     <div
       className={clsx(
@@ -502,7 +535,9 @@ export default function UsersPage() {
                               <TableCell className="text-center">
                                 <Switch
                                   checked={user.user_plan_active}
-                                  onCheckedChange={() => {}}
+                                  onCheckedChange={(checked) =>
+                                    handleToggleSubscription(user, checked)
+                                  }
                                 />
                               </TableCell>
                               <TableCell>
