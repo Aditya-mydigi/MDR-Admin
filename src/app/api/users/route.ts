@@ -22,17 +22,42 @@ export async function GET(request: Request) {
       `📄 Fetching users (page=${page}, limit=${limit}, search="${search}", status="${status}", region="${region}")`
     );
 
-    // ✅ Dynamic filters for both DBs
+    // Dynamic filters for both DBs
     const whereClause: any = {};
 
+    let searchOR: any[] = [];
     if (search) {
-      whereClause.OR = [
+      const parts = search.split(/\s+/).filter(Boolean);
+      searchOR = [
         { first_name: { contains: search, mode: "insensitive" } },
         { last_name: { contains: search, mode: "insensitive" } },
         { email: { contains: search, mode: "insensitive" } },
         { phone_num: { contains: search, mode: "insensitive" } },
+        { mdr_id: { contains: search, mode: "insensitive" } },
         { blood_group: { contains: search, mode: "insensitive" } },
       ];
+
+      // If multiple words, try matching them across name fields
+      if (parts.length >= 2) {
+        const first = parts[0];
+        const last = parts.slice(1).join(" ");
+
+        searchOR.push({
+          AND: [
+            { first_name: { contains: first, mode: "insensitive" } },
+            { last_name: { contains: last, mode: "insensitive" } },
+          ],
+        });
+
+        searchOR.push({
+          AND: [
+            { first_name: { contains: last, mode: "insensitive" } },
+            { last_name: { contains: first, mode: "insensitive" } },
+          ],
+        });
+      }
+
+      whereClause.OR = searchOR;
     }
 
     if (bloodGroups.length > 0) {
@@ -57,14 +82,6 @@ export async function GET(request: Request) {
       // Prisma doesn't support implicit AND between top-level ORs easily without AND: [].
       if (search) {
         // We need to restructure to use AND for the status+search combination
-        const searchOR = [
-          { first_name: { contains: search, mode: "insensitive" } },
-          { last_name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { phone_num: { contains: search, mode: "insensitive" } },
-          { blood_group: { contains: search, mode: "insensitive" } },
-        ];
-
         whereClause.AND = [
           { OR: searchOR },
           {
