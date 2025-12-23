@@ -231,13 +231,6 @@ model referral_codes {
   coupons         coupons[]
 }
 
-model referral_modules {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
-  referral_code String
-  module_name   String
-  created_at    DateTime? @default(now()) @usa.Timestamp(6)
-}
-
 enum gender_enum {
   male
   female
