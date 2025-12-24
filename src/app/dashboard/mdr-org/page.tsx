@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
-import { MdrPanelUser } from "../../../../prisma/generated/panel";
+import { mdrPanelUser } from "../../../../prisma/generated/panel";
 import { 
     Edit, 
     Trash2, 
@@ -56,7 +56,7 @@ export default function MDROrgPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // load users
-  const [users, setUsers] = useState<MdrPanelUser[]>([]);
+  const [users, setUsers] = useState<mdrPanelUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -84,7 +84,7 @@ export default function MDROrgPage() {
   const [viewUser, setViewUser] = useState<any>(null);
   const [viewLoading, setViewLoading] = useState(false);
   // active admins (dashboard list)
-  const [activeAdmins, setActiveAdmins] = useState<MdrPanelUser[]>([]);
+  const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
   const [adminsLoading, setAdminsLoading] = useState(false);
   const [adminPage, setAdminPage] = useState(1);
   const [adminLimit, setAdminLimit] = useState(5);
@@ -245,7 +245,7 @@ const handleSubmit = async () => {
 
 
 // HANDLE EDIT USER
-const handleEdit = (user: MdrPanelUser) => {
+const handleEdit = (user: mdrPanelUser) => {
   //open dialog in edit mode
   setEditMode(true);
   //store who is being edited
@@ -293,7 +293,7 @@ setDeleteUserId(null);
 
 
 // HANDLE VIEW USER
-const handleView = async (user: MdrPanelUser) => {
+const handleView = async (user: mdrPanelUser) => {
     setViewDialogOpen(true);
     setViewLoading(true);
 
@@ -312,7 +312,7 @@ setViewUser(json.data ?? null);
 }};
 
 // HANDLE TOGGLE STATUS
-const handleToggleStatus = async (user: MdrPanelUser) => {
+const handleToggleStatus = async (user: mdrPanelUser) => {
   try {
     const newStatus = !user.isactive;
 
