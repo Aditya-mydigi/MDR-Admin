@@ -19,7 +19,7 @@ export default function CouponPage() {
   return (
     <div
       className={clsx(
-        "min-h-screen bg-white flex",
+        "h-screen bg-white flex overflow-hidden",
         sidebarOpen && "overflow-hidden"
       )}
     >

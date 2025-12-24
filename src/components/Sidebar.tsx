@@ -70,7 +70,7 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "fixed lg:static z-50 top-0 left-0 bottom-0 bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a] text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg",
+          "fixed lg:sticky top-0 left-0 z-50 h-screen bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a] text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg",
           collapsed ? "w-20" : "w-64",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -96,7 +96,7 @@ export default function Sidebar({
                   </div>
                 </div>
                 <div className="text-xs font-semibold text-white/90">
-                  mdr. MYDIGIRECORDS
+                  MYDIGIRECORDS
                 </div>
               </div>
             )}

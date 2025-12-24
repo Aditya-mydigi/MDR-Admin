@@ -96,6 +96,7 @@ export default function UsersPage() {
   const [regionFilter, setRegionFilter] = useState<"total" | "india" | "usa">(
     "total"
   );
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sidebar persistence
   useEffect(() => {
@@ -329,7 +330,7 @@ export default function UsersPage() {
   return (
     <div
       className={clsx(
-        "min-h-screen bg-background flex",
+        "h-screen bg-background flex overflow-hidden",
         sidebarOpen && "overflow-hidden"
       )}
     >
@@ -753,17 +754,46 @@ export default function UsersPage() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  setUsers((prev) =>
-                    prev.filter((u) => u.id !== userToDelete?.id)
-                  );
-                  toast.success("User deleted");
-                  setDeleteDialogOpen(false);
-                  // Refetch to ensure consistency
-                  fetchUsers();
+                disabled={isDeleting}
+                onClick={async () => {
+                  if (!userToDelete) return;
+
+                  setIsDeleting(true);
+                  try {
+                    const res = await fetch(`/api/users/${userToDelete.id}`, {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        region: userToDelete.region,
+                        mdr_id: userToDelete.mdr_id,
+                      }),
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                      throw new Error(data.error || data.message || "Failed to delete user");
+                    }
+
+                    toast.success("User deleted successfully");
+                    setDeleteDialogOpen(false);
+                    fetchUsers(); // Refresh the list
+                  } catch (err: any) {
+                    console.error("Delete user error:", err);
+                    toast.error(err.message || "Delete failed");
+                  } finally {
+                    setIsDeleting(false);
+                  }
                 }}
               >
-                Delete User
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete User"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

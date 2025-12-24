@@ -196,7 +196,7 @@ export default function CouponTab() {
     setEditId(coupon.id);
     setFormData({
       coupon_code: coupon.coupon_code,
-      type: coupon.type === "new" ? "percentage" : "fixed",
+      type: (coupon.type === "percentage" || coupon.type === "new") ? "percentage" : "fixed",
       amount: coupon.amount.toString(),
       start_date: coupon.start_date
         ? new Date(coupon.start_date).toISOString().split("T")[0]
@@ -248,8 +248,9 @@ export default function CouponTab() {
 
   const getCouponType = (type: string | null) => {
     if (!type) return "Unknown";
-    if (type === "new") return "Percentage";
-    if (type === "regular") return "Fixed";
+    const t = type.toLowerCase();
+    if (t === "new" || t === "percentage") return "Percentage";
+    if (t === "regular" || t === "flat" || t === "fixed") return "Fixed";
     return type;
   };
 
@@ -539,7 +540,7 @@ export default function CouponTab() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {coupon.type === "new"
+                    {(coupon.type === "percentage" || coupon.type === "new")
                       ? `${coupon.amount}%`
                       : region === "india"
                       ? `₹${coupon.amount}`

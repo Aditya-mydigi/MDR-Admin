@@ -403,7 +403,7 @@ export default function DashboardPage() {
   return (
     <div
       className={clsx(
-        "min-h-screen bg-white flex",
+        "h-screen bg-white flex overflow-hidden",
         sidebarOpen && "overflow-hidden"
       )}
     >

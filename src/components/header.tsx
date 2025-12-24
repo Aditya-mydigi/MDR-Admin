@@ -16,26 +16,28 @@ export default function Header({
 }) {
     const router = useRouter();
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
+        setIsMounted(true);
         const timer = setInterval(() => {
             setCurrentTime(new Date());
         }, 1000);
         return () => clearInterval(timer);
     }, []);
 
-    const formattedDate = currentTime.toLocaleDateString("en-US", {
+    const formattedDate = isMounted ? currentTime.toLocaleDateString("en-US", {
         weekday: 'short',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-    });
+    }) : "";
 
-    const formattedTime = currentTime.toLocaleTimeString("en-US", {
+    const formattedTime = isMounted ? currentTime.toLocaleTimeString("en-US", {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-    });
+    }) : "";
 
     return (
         <header className="flex justify-between items-center bg-white/80 backdrop-blur-md px-6 py-4 shadow-sm sticky top-0 z-30 border-b border-gray-100">

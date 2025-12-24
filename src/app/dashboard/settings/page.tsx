@@ -33,7 +33,7 @@ export default function SettingsPage() {
   }, [router]);
 
   return (
-    <div className={clsx("min-h-screen bg-[#f3f6fb] flex", sidebarOpen && "overflow-hidden")}>
+    <div className={clsx("h-screen bg-[#f3f6fb] flex overflow-hidden", sidebarOpen && "overflow-hidden")}>
       <Sidebar 
         sidebarOpen={sidebarOpen} 
         collapsed={sidebarCollapsed}

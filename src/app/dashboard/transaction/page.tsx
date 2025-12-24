@@ -220,7 +220,7 @@ export default function AllTransactionsPage() {
   return (
     <div
       className={clsx(
-        "min-h-screen bg-background flex",
+        "h-screen bg-background flex overflow-hidden",
         sidebarOpen && "overflow-hidden"
       )}
     >

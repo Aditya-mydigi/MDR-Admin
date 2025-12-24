@@ -411,7 +411,7 @@ export default function HealthChecksPage() {
   const hasLoaded = Object.keys(statusMap).length > 0;
 
   return (
-    <div className={clsx("min-h-screen bg-gray-50 flex", sidebarOpen && "overflow-hidden")}>
+    <div className={clsx("h-screen bg-gray-50 flex overflow-hidden", sidebarOpen && "overflow-hidden")}>
       <Sidebar
         sidebarOpen={sidebarOpen}
         collapsed={sidebarCollapsed}

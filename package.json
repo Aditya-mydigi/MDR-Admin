@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "node server.js",
     "lint": "next lint",
-    "prisma:generate": "prisma generate --schema=prisma/schema.prisma && prisma generate --schema=prisma/schema-india.prisma",
+    "prisma:generate": "prisma generate --schema=prisma/schema.prisma && prisma generate --schema=prisma/schema-india.prisma && prisma generate --schema=prisma/schema-panel.prisma",
     "prisma:generate:usa": "prisma generate --schema=prisma/schema.prisma",
     "prisma:generate:india": "prisma generate --schema=prisma/schema-india.prisma",
+    "prisma:generate:panel": "prisma generate --schema=prisma/schema-panel.prisma",
     "postinstall": "npm run prisma:generate"
   },
   "dependencies": {

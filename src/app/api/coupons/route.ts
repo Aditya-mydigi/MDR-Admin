@@ -85,20 +85,18 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Validate type - database constraint expects 'new' or 'regular'
-        // Map user-friendly values: 'percentage' -> 'new', 'fixed' -> 'regular'
+        // Validate type - database constraint expects 'percentage' or 'flat'
+        // Map user-friendly values: 'percentage' -> 'percentage', 'fixed' -> 'flat'
         const normalizedType = type.toLowerCase();
         let typeForDb: string;
 
-        if (normalizedType === "percentage") {
-            typeForDb = "new";
-        } else if (normalizedType === "fixed") {
-            typeForDb = "regular";
-        } else if (normalizedType === "new" || normalizedType === "regular") {
-            typeForDb = normalizedType;
+        if (normalizedType === "percentage" || normalizedType === "new") {
+            typeForDb = "percentage";
+        } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+            typeForDb = "flat";
         } else {
             return NextResponse.json(
-                { success: false, error: 'type must be either "percentage" (or "new") or "fixed" (or "regular")' },
+                { success: false, error: 'type must be either "percentage" or "fixed" (flat)' },
                 { status: 400 }
             );
         }
@@ -112,8 +110,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Validate percentage amount (for 'new' type which represents percentage)
-        if (typeForDb === "new" && (amountNum < 0 || amountNum > 100)) {
+        // Validate percentage amount
+        if (typeForDb === "percentage" && (amountNum < 0 || amountNum > 100)) {
             return NextResponse.json(
                 { success: false, error: "percentage amount must be between 0 and 100" },
                 { status: 400 }

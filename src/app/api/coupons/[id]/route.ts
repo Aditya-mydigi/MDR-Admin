@@ -128,15 +128,13 @@ export async function PUT(
         let typeForDb: string | undefined;
         if (type !== undefined) {
             const normalizedType = type.toLowerCase();
-            if (normalizedType === "percentage") {
-                typeForDb = "new";
-            } else if (normalizedType === "fixed") {
-                typeForDb = "regular";
-            } else if (normalizedType === "new" || normalizedType === "regular") {
-                typeForDb = normalizedType;
+            if (normalizedType === "percentage" || normalizedType === "new") {
+                typeForDb = "percentage";
+            } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+                typeForDb = "flat";
             } else {
                 return NextResponse.json(
-                    { success: false, error: 'type must be either "percentage" (or "new") or "fixed" (or "regular")' },
+                    { success: false, error: 'type must be either "percentage" or "fixed" (flat)' },
                     { status: 400 }
                 );
             }
@@ -152,9 +150,9 @@ export async function PUT(
                 );
             }
 
-            // Validate percentage amount (for 'new' type which represents percentage)
+            // Validate percentage amount
             const currentType = typeForDb || existingCoupon.type;
-            if (currentType && currentType.toLowerCase() === "new" && (amountNum < 0 || amountNum > 100)) {
+            if (currentType && currentType.toLowerCase() === "percentage" && (amountNum < 0 || amountNum > 100)) {
                 return NextResponse.json(
                     { success: false, error: "percentage amount must be between 0 and 100" },
                     { status: 400 }
