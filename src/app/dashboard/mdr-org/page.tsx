@@ -12,6 +12,10 @@ import {
     ArrowLeftIcon, 
     ArrowRightIcon, 
     LucideUserPlus2,
+    Search,
+    LoaderCircle,
+    ChevronsLeft,
+    ChevronsRight,
 } from "lucide-react";
 
 import {
@@ -44,9 +48,7 @@ import {
 // ui components
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { set } from "date-fns";
-import PreviousMap_ from "postcss/lib/previous-map";
-import { PreviousMonthButton } from "react-day-picker";
+import { Input } from "@/components/ui/input"
 
 // main component
 export default function MDROrgPage() {
@@ -55,8 +57,9 @@ export default function MDROrgPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // load users
   const [users, setUsers] = useState<MdrPanelUser[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   // delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -80,7 +83,12 @@ export default function MDROrgPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewUser, setViewUser] = useState<any>(null);
   const [viewLoading, setViewLoading] = useState(false);
-
+  // active admins (dashboard list)
+  const [activeAdmins, setActiveAdmins] = useState<MdrPanelUser[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminLimit, setAdminLimit] = useState(5);
+  const [adminTotalPages, setAdminsTotalPages] = useState(1);
   
 
   
@@ -97,12 +105,27 @@ export default function MDROrgPage() {
   const [userFormData, setUserFormData] = useState(initialUserForm);
  
 
+  const [debouncedSearch, setDebouncedSearch] = useState(searchText);
+  useEffect(() => {
+    setIsSearching(true);
+
+    const timeout = setTimeout(() => {
+        setDebouncedSearch(searchText);
+        setPage(1); // reset page only after debounce
+        setIsSearching(false);
+    }, 400); 
+
+    return () => clearTimeout(timeout);
+  }, [searchText]);
+
 
 /**
 * Fetch users on initial page load
 * */
   const fetchUsers = async () => {
-    setLoading(true);
+    if (!debouncedSearch) {
+        setLoading(true);
+    }
 
     const params = new URLSearchParams({
         page: String(page),
@@ -112,7 +135,9 @@ export default function MDROrgPage() {
         sort: sortDir,
     });
 
-    if (searchText.trim()) params.set("search", searchText.trim());
+    if (debouncedSearch.trim()) {
+        params.set("search", debouncedSearch.trim());
+    }
 
     const res = await fetch(`/api/mdr-org?${params.toString()}`, { cache: "no-store" });
     const json = await res.json();
@@ -125,7 +150,40 @@ export default function MDROrgPage() {
   };
 useEffect(() => {
   fetchUsers();
-}, [page, limit, searchText, statusFilter, roleFilter,sortDir]);
+}, [page, limit, debouncedSearch, statusFilter, roleFilter,sortDir]);
+
+useEffect(() => {
+    fetchActiveAdmins();
+}, [adminPage, adminLimit]);
+
+const fetchActiveAdmins = async () => {
+    try {
+        setAdminsLoading(true);
+
+        const params = new URLSearchParams({
+            role: "admin",
+            status: "active",
+            sort: "asc",
+            page: String(adminPage),
+            limit: String(adminLimit),
+        });
+
+        const res = await fetch(`/api/mdr-org?${params.toString()}`, {
+            cache: "no-store",
+        });
+
+        const json = await res.json();
+
+        setActiveAdmins(Array.isArray(json.data) ? json.data : []);
+        setAdminsTotalPages(json.pagination?.totalPages ?? 1);
+
+    } catch (err) {
+        console.error("Failed to fetch active admins", err);
+        setActiveAdmins([]);
+    } finally {
+        setAdminsLoading(false);
+    }
+}
 
 
 // HANDLE NEW USER  
@@ -173,7 +231,10 @@ const handleSubmit = async () => {
     setEditUserId(null);
     setUserFormData(initialUserForm);
 
-    await fetchUsers();
+    await Promise.all([
+        fetchUsers(),
+        fetchActiveAdmins(),
+    ]);
 
   } catch (err) {
     console.error("Error saving user:", err);
@@ -219,8 +280,11 @@ await fetch("/api/mdr-org", {
 // remove from UI
 setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));
 
+await fetchActiveAdmins();
+
 setDeleteDialogOpen(false);
 setDeleteUserId(null);
+
 } catch (err) {
     console.error("Failed to delete user", err);
 } finally {
@@ -269,6 +333,8 @@ const handleToggleStatus = async (user: MdrPanelUser) => {
         u.id === user.id ? { ...u, isactive: newStatus } : u
       )
     );
+    await fetchActiveAdmins();
+
   } catch (err) {
     console.error("Error toggling status:", err);
   }
@@ -295,7 +361,7 @@ return (
       />
 
     {/* MAIN COLUMN */}
-      <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 bg-white">
+      <div className="flex-1 flex flex-col transition-all duration-300">
         <Header
           title="MDR User Panel"
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -307,84 +373,94 @@ return (
         <div className="p-4 border-b bg-white flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             
             {/* Search */}
-          <div className="w-full sm:w-80">
-            <input
-              className="w-full border rounded-md px-3 py-2"
-              placeholder="Search users..."
-              value={searchText}
-              onChange={(e) => {
-                setPage(1);
-                setSearchText(e.target.value);
-              }}
-            />
-          </div>
+            <div className="relative w-full sm:w-80">
+                {isSearching ? (
+                      <LoaderCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    )}
+                <Input
+                className="pl-10"
+                placeholder= "Search users..."
+                value={searchText}
+                onChange={(e) => {
+                    setPage(1);
+                    setSearchText(e.target.value);
+                }}
+                />
+            </div>
 
-          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-wrap gap-2 items-center">
             {/* New User Buton */}
-          <Button
-            onClick={() => {
-                setEditMode(false);
-                setEditUserId(null);
-                setUserFormData(initialUserForm);
-                setEditDialogOpen(true);
-            }}
-          >
-            New User
-            <LucideUserPlus2 className="ml-1 h-5 w-5" />
-          </Button>
+            <Button
+                onClick={() => {
+                    setEditMode(false);
+                    setEditUserId(null);
+                    setUserFormData(initialUserForm);
+                    setEditDialogOpen(true);
+                }}
+            >
+                New User
+                <LucideUserPlus2 className="ml-1 h-5 w-5" />
+            </Button>
 
             {/* Role Filter */}
-          <select
-            className="border rounded-md px-3 py-2"
-            value={roleFilter}
-            onChange={(e) => {
-              setPage(1);
-              setRoleFilter(e.target.value as "all" | "admin" | "employee");
-            }}
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="employee">Employee</option>
-          </select>
+            <select
+                className="border rounded-md px-3 py-2"
+                value={roleFilter}
+                onChange={(e) => {
+                    setPage(1);
+                    setRoleFilter(e.target.value as "all" | "admin" | "employee");
+                }}
+            >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="employee">Employee</option>
+            </select>
 
             {/* Status Filter */}
             <select
-              className="border rounded-md px-3 py-2"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value as "active" | "inactive" | "all");
-              }}
+                className="border rounded-md px-3 py-2"
+                value={statusFilter}
+                onChange={(e) => {
+                    setPage(1);
+                    setStatusFilter(e.target.value as "active" | "inactive" | "all");
+                }}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="all">Activity: All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="all">All Status</option>
             </select>
-
 
             {/* Sort toggle */}
             <button
-              className="border rounded-md px-3 py-2 hover:bg-gray-100"
-              onClick={() =>
-                setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-              }
-              title="Sort by First Name"
+                className="border rounded-md px-3 py-2 hover:bg-gray-100"
+                onClick={() =>
+                    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                }
+                title="Sort by First Name"
             >
-              Sort: {sortDir === "asc" ? "A->Z" : "Z->A"}
+                Sort: {sortDir === "asc" ? "A->Z" : "Z->A"}
             </button>
-          </div>
+
+            </div>
         </div>
     </div>
 
 
-        {/* CONTENT */}
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {loading ? (
-            <div>Loading users...</div>
-          ) : (
-            <>
-            <Card className="mt-4">
-              <CardContent className="p-0">
+{/* CONTENT */}
+<main className="p-6 text-sm text-muted-foreground">
+    {loading ? (
+        <div>Loading users...</div>
+        ) : (
+        <>
+        {isSearching && (
+            <div className="px-4 py-2 text-xs text-muted-foreground">
+                Searching...
+            </div>
+        )}
+    <Card className="mt-4">
+        <CardContent className="p-0">
               {/* TABLE */}
             <Table>
                 <TableHeader className="bg-muted 40">
@@ -467,6 +543,11 @@ return (
                 </TableBody>
             </Table>
 
+        <div className="flex items-center justify-between border-t px-4 py-3">
+            {/* Count */}
+            <span className="text-sm text-muted-foreground">
+                Showing {users.length} of {totalUsers} users
+            </span>
 
             {/* PAGINATION */}
             <div className="flex items-center justify-end items-center gap-4 border-t px-4 py-3">
@@ -508,7 +589,7 @@ return (
                         onClick={() => setPage(1)}
                         disabled={page === 1}
                     >
-                        «
+                        <ChevronsLeft className="h-5 w-5" />
                     </Button>
 
                     {/* Prev Page */}
@@ -537,17 +618,151 @@ return (
                         onClick={() => setPage(totalPages)}
                         disabled={page === totalPages}
                     >
-                        »
+                        <ChevronsRight className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
-           </CardContent> 
-           </Card>
-           </>
-          )}
+            </div>
+        </CardContent> 
+    </Card>
+
+    {/* Active Admins */}
+    <Card className="mt-6 max-w-[600px]">
+        <CardContent className="p-0">
+            {/* Description */}
+            <div className="px-4 py-3 border-b">
+                <h3 className="text-md font-semibold text-gray-800">
+                    Active Admins
+                </h3>
+            </div>
+
+            {adminsLoading ? (
+                <div className="p-4 text-sm text-gray-600">Loading admins...</div>
+            ) : activeAdmins.length === 0 ? (
+                <div className="p-4 text-sm text-gray-600">No active admins</div>
+            ) : (
+
+            <div className="relative">
+                <Table>
+                    <TableHeader className="bg-muted 40">
+                        <TableRow className="border-b last:border-b-0">
+                            <TableHead>First Name</TableHead>
+                            <TableHead>Last Name</TableHead>
+                            <TableHead>Email</TableHead>
+                            <TableHead className="text-center pr-6">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    
+                    {/* Table Body */}
+                    <TableBody>
+                        {activeAdmins.map((admin) => (
+                            <TableRow key={admin.id}>
+                                <TableCell className="font-medium">{admin.first_name}</TableCell>
+                                <TableCell className="font-medium">{admin.last_name}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground">{admin.email}</TableCell>
+                                <TableCell className="text-center">
+                                    <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleView(admin)}
+                                    title="View Admin"
+                                    >
+                                        <EyeIcon className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+            )}
+        
+            
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between border-t px-4 py-3">
+                {/* Rows per page */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>
+                        Rows per page</span>
+                        
+                    <Select
+                        value={String(adminLimit)}
+                        onValueChange={(value) => {
+                            setAdminPage(1);
+                            setAdminLimit(Number(value));
+                        }}
+                    >
+                        <SelectTrigger className="w-[80px]">
+                            <SelectValue />
+                        </SelectTrigger>
+                        
+                        <SelectContent>
+                            {[5, 10, 15].map((n) => (
+                                <SelectItem key={n} value={String(n)}>
+                                    {n}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                
+                {/* Page controls */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setAdminPage(1)}
+                        disabled={adminPage === 1}
+                        title="First page"
+                    >
+                        <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+                        disabled={adminPage === 1}
+                        title="Previous page"
+                    >
+                        <ArrowLeftIcon className="h-4 w-4" />
+                    </Button>
+                    
+                    <span>
+                        Page {adminPage} of {adminTotalPages}
+                    </span>
+                    
+                    <Button
+                        variant="outline"  
+                        size="icon"
+                        onClick={() =>
+                            setAdminPage((p) => Math.min(adminTotalPages, p + 1))
+                        }
+                        disabled={adminPage === adminTotalPages}
+                        title="Next page"
+                    >
+                        <ArrowRightIcon className="h-4 w-4" />
+                    </Button>
+                    
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setAdminPage(adminTotalPages)}
+                        disabled={adminPage === adminTotalPages}
+                        title="Last page"
+                    >
+                        <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+</>
+        )}
         </main>
-      </div>
-    </div>
+        </div>
+        </div>
 
     {/* DELETE DIALOG */}
     <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
