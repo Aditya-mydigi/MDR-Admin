@@ -124,19 +124,34 @@ export async function PUT(
             }
         }
 
-        // Validate type if provided
+        // Validate type if provided - database constraint varies by region
         let typeForDb: string | undefined;
         if (type !== undefined) {
             const normalizedType = type.toLowerCase();
-            if (normalizedType === "percentage" || normalizedType === "new") {
-                typeForDb = "percentage";
-            } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
-                typeForDb = "flat";
+            if (region.toLowerCase() === "usa") {
+                // USA expects 'percentage' or 'flat'
+                if (normalizedType === "percentage" || normalizedType === "new") {
+                    typeForDb = "percentage";
+                } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+                    typeForDb = "flat";
+                } else {
+                    return NextResponse.json(
+                        { success: false, error: 'USA type must be either "percentage" or "fixed" (flat)' },
+                        { status: 400 }
+                    );
+                }
             } else {
-                return NextResponse.json(
-                    { success: false, error: 'type must be either "percentage" or "fixed" (flat)' },
-                    { status: 400 }
-                );
+                // India expects 'percentage' (though often not used), 'regular', or 'new'
+                if (normalizedType === "percentage" || normalizedType === "new") {
+                    typeForDb = "new";
+                } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+                    typeForDb = "regular";
+                } else {
+                    return NextResponse.json(
+                        { success: false, error: 'India type must be either "new" (percentage) or "regular" (fixed)' },
+                        { status: 400 }
+                    );
+                }
             }
         }
 
