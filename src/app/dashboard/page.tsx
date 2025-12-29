@@ -420,6 +420,7 @@ const fetchActiveAdmins = async () => {
 
     setActiveAdmins(Array.isArray(json.data) ? json.data : []);
     setAdminTotalPages(json.pagination?.totalPages ?? 1);
+    setTotalUsers(json.pagination?.total ?? 0);
   } catch (err) {
     console.error("Failed to fetch active admins", err);
     setActiveAdmins([]);
@@ -694,14 +695,18 @@ setViewUser(json.data ?? null);
               {/* Pagination */}
               <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                 <div className="text-sm text-gray-600 text-muted-foreground">
-                  {activeAdmins.length} active admin(s).
+                  {totalUsers} active admin(s).
                 </div>
                 <div className="flex items-center gap-4">
                   <Select
                     value={String(adminLimit)}
                     onValueChange={(value) => {
-                      setAdminPage(1);
-                      setAdminLimit(Number(value));
+                      const newLimit = Number(value);
+                      const firstItemIndex = (adminPage - 1) * adminLimit;
+                      const newPage = Math.floor(firstItemIndex / newLimit) + 1;
+
+                      setAdminLimit(newLimit);
+                      setAdminPage(newPage);
                     }}
                   >
                     <div className="text-sm text-gray-600 text-muted-foreground">
@@ -726,6 +731,7 @@ setViewUser(json.data ?? null);
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {/* First Page */}
                     <Button
                       variant="outline"
                       size="icon"
@@ -735,6 +741,7 @@ setViewUser(json.data ?? null);
                     >
                       <ChevronsLeft className="h-4 w-4" />
                     </Button>
+                    {/* Prev Page */}
                     <Button
                       variant="outline"
                       size="icon"
@@ -744,27 +751,23 @@ setViewUser(json.data ?? null);
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
+                    {/* Next Page */}
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={() => setAdminPage((p) => Math.max(1, p + 1))}
-                      disabled={
-                        adminPage === Math.ceil(adminPage / pageSize)
-                      }
+                      onClick={() => setAdminPage((p) => Math.max(adminTotalPages, p + 1))}
+                      disabled={adminPage >= adminTotalPages}
                     >
                       <ArrowRight className="h-4 w-4" />
                     </Button>
+                    {/* Last Page */}
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={() =>
-                        setAdminPage(Math.ceil(adminPage / pageSize))
-                      }
-                      disabled={
-                        adminPage === Math.ceil(adminPage / pageSize)
-                      }
+                      onClick={() => setAdminPage(adminTotalPages)}
+                      disabled={adminPage >= adminTotalPages}
                     >
                       <ChevronsRight className="h-4 w-4" />
                     </Button>
