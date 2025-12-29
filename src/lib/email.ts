@@ -39,7 +39,6 @@ export async function generateAndSendOtp(email: string, role: string) {
     MDR Support Team`,
   };
 
-
   try {
     await transporter.sendMail(mailOptions);
     console.log(`Email sent successfully to ${email} with OTP: ${otp}`);
