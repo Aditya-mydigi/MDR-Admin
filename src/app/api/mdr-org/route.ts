@@ -6,34 +6,34 @@ import { PrismaClient } from "../../../../prisma/generated/panel";
 const prisma = new PrismaClient();
 export async function GET(req: Request) {
 
-// Check if id query param is present for fetching single user //
-const { searchParams } = new URL(req.url);
-const id = searchParams.get("id");
+  // Check if id query param is present for fetching single user //
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
 
-if (id) {
-  const user = await prisma.mdrPanelUser.findUnique({
-    where: { id },
-    select: {
-      mdr_id: true,
-      first_name: true,
-      last_name: true,
-      email: true,
-      role: true,
-      phone1: true,
-      phone2: true,
-      isactive: true,
-      date_of_joining: true,
-      updated_at: true,
-    },
-  });
+  if (id) {
+    const user = await prisma.mdrPanelUser.findUnique({
+      where: { id },
+      select: {
+        mdr_id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        role: true,
+        phone1: true,
+        phone2: true,
+        isactive: true,
+        date_of_joining: true,
+        updated_at: true,
+      },
+    });
 
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  } 
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-  return NextResponse.json({ data: user });
-}
-///////////////////////////////////////////////////////////////////
+    return NextResponse.json({ data: user });
+  }
+  ///////////////////////////////////////////////////////////////////
 
   try {
     const { searchParams } = new URL(req.url);
@@ -42,7 +42,7 @@ if (id) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") ?? "10")));
     const search = (searchParams.get("search") ?? "").trim();
     const status = (searchParams.get("status") ?? "active").toLowerCase();
-    const role = (searchParams.get("role") ?? "all").toLowerCase(); 
+    const role = (searchParams.get("role") ?? "all").toLowerCase();
     const sort = (searchParams.get("sort") ?? "asc").toLowerCase(); // asc | desc
     const skip = (page - 1) * limit;
 
@@ -52,14 +52,14 @@ if (id) {
 
     // filter by status
     if (status === "active") {
-        where.isactive = true;
+      where.isactive = true;
     } else if (status === "inactive") {
-        where.isactive = false;
+      where.isactive = false;
     }
 
     // filter by role if specified
     if (role === "admin" || role === "employee") {
-        where.role = role;
+      where.role = role;
     }
 
     // search by first_name or last_name
@@ -71,7 +71,7 @@ if (id) {
     }
 
 
-    
+
     // QUERY DB WITH PAGINATION & FILTERS //
     const [users, total] = await Promise.all([
       prisma.mdrPanelUser.findMany({
@@ -118,9 +118,12 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const normalizedRole =
-        typeof body.role === "string"
-            ? body.role.toLowerCase()
-            : body.role;
+      typeof body.role === "string"
+        ? body.role.toLowerCase()
+        : body.role;
+
+    // Helper to treat empty strings as null (essential for unique but optional fields)
+    const nullIfEmpty = (val: any) => (typeof val === 'string' && val.trim() === '' ? null : val);
 
     // create new user
     const user = await prisma.mdrPanelUser.create({
@@ -131,71 +134,93 @@ export async function POST(req: Request) {
         role: normalizedRole,
         phone1: body.phone1,
         phone2: body.phone2,
-        mdr_id: body.mdr_id,
+        mdr_id: nullIfEmpty(body.mdr_id),
       },
     });
 
-// return created user
+    // return created user
     return NextResponse.json(user, { status: 201 });
-  } catch (error) {        // error handling
-  console.error("CREATE USER ERROR FULL:", error);
+  } catch (error: any) {        // error handling
+    console.error("CREATE USER ERROR FULL:", error);
 
-  let message = "Unknown error";
+    // Handle Prisma unique constraint violations
+    if (error.code === 'P2002') {
+      const target = error.meta?.target || [];
+      const field = target.includes('mdr_id') ? 'MDR ID' : target.includes('email') ? 'Email' : 'Field';
+      return NextResponse.json(
+        { error: `${field} already exists. Please use a unique value.` },
+        { status: 409 }
+      );
+    }
 
-  if (error instanceof Error) {
-    message = error.message;
-  }
+    let message = "Unknown error";
+    if (error instanceof Error) {
+      message = error.message;
+    }
 
-  return NextResponse.json(
-    {
-      error: "Failed to create user",
-      details: message,
-    },
-    { status: 500 }
+    return NextResponse.json(
+      {
+        error: "Failed to create user",
+        details: message,
+      },
+      { status: 500 }
     );
   }
 }
 
 // PUT /api/mdr-org //
 export async function PUT(req: Request) {
-    try {
-        const body = await req.json();
+  try {
+    const body = await req.json();
 
-        if (!body.id) {
-            return NextResponse.json(
-                {error: "User id is required"},
-                {status: 400}
-            );
-        }
-        // normalize role to lowercase
-        const normalizedRole =
-        typeof body.role === "string"
-            ? body.role.toLowerCase()
-            : body.role;
-        // update user
-        const user = await prisma.mdrPanelUser.update({
-            where: {id: body.id},
-            data: {
-                first_name: body.first_name,
-                last_name: body.last_name,
-                email: body.email,
-                role: normalizedRole,
-                phone1: body.phone1,
-                phone2: body.phone2,
-                mdr_id: body.mdr_id,
-                isactive: Boolean(body.isactive),
-            },
-        });
-        
-        // return updated user
-        return NextResponse.json(user);
-      } catch (error) {
-        console.error("UPDATE USER ERROR FULL:", error);
-        return NextResponse.json(
-            {error: "Failed to update user"},
-            {status: 500}
-        );
+    if (!body.id) {
+      return NextResponse.json(
+        { error: "User id is required" },
+        { status: 400 }
+      );
     }
+    // normalize role to lowercase
+    const normalizedRole =
+      typeof body.role === "string"
+        ? body.role.toLowerCase()
+        : body.role;
+    // Helper to treat empty strings as null
+    const nullIfEmpty = (val: any) => (typeof val === 'string' && val.trim() === '' ? null : val);
+
+    // update user
+    const user = await prisma.mdrPanelUser.update({
+      where: { id: body.id },
+      data: {
+        first_name: body.first_name,
+        last_name: body.last_name,
+        email: body.email,
+        role: normalizedRole,
+        phone1: body.phone1,
+        phone2: body.phone2,
+        mdr_id: nullIfEmpty(body.mdr_id),
+        isactive: Boolean(body.isactive),
+      },
+    });
+
+    // return updated user
+    return NextResponse.json(user);
+  } catch (error: any) {
+    console.error("UPDATE USER ERROR FULL:", error);
+
+    if (error.code === 'P2002') {
+      const target = error.meta?.target || [];
+      const field = target.includes('mdr_id') ? 'MDR ID' : target.includes('email') ? 'Email' : 'Field';
+      return NextResponse.json(
+        { error: `${field} already exists. Please use a unique value.` },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: "Failed to update user" },
+      { status: 500 }
+    );
+  }
 }
 
 
@@ -218,17 +243,17 @@ export async function PATCH(req: Request) {
       select: {
         id: true,
         isactive: true,
-      },  
+      },
     });
 
-    return NextResponse.json({success: true, user});
-    } catch (error) { 
-        console.error("PATCH USER STATUS ERROR:", error);
-        return NextResponse.json(
-            {error: "Failed to update user status"},
-            {status: 500}
-        );
-    }
+    return NextResponse.json({ success: true, user });
+  } catch (error) {
+    console.error("PATCH USER STATUS ERROR:", error);
+    return NextResponse.json(
+      { error: "Failed to update user status" },
+      { status: 500 }
+    );
+  }
 }
 
 

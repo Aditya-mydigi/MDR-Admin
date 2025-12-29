@@ -2,6 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { toast } from "sonner";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 import { mdrPanelUser } from "../../../../prisma/generated/panel";
@@ -69,6 +70,7 @@ export default function MDROrgPage() {
   const [editMode, setEditMode] = useState(false);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   // table controls
   const [searchText, setSearchText] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "employee">("all");
@@ -221,11 +223,13 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("API error:", data);
-      return;
+        setFormError(data.error || "Failed to save user");
+        toast.error(data.error || "Failed to save user");
+        return;
     }
 
     // success
+    toast.success(editMode ? "User updated successfully" : "User created successfully");
     setEditDialogOpen(false);
     setEditMode(false);
     setEditUserId(null);
@@ -260,6 +264,7 @@ const handleEdit = (user: mdrPanelUser) => {
     mdr_id: user.mdr_id ?? "",
     isactive: user.isactive,
   });
+  setFormError(null);
   setEditDialogOpen(true);
 };
 
@@ -396,6 +401,7 @@ return (
                 onClick={() => {
                     setEditMode(false);
                     setEditUserId(null);
+                    setFormError(null);
                     setUserFormData(initialUserForm);
                     setEditDialogOpen(true);
                 }}
@@ -809,11 +815,19 @@ return (
       </DialogDescription>
     </DialogHeader>
 
+    {formError && (
+      <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-md text-sm font-medium animate-in fade-in zoom-in duration-200">
+        {formError}
+      </div>
+    )}
+
     <div className="space-y-4">
 
       {/* First Name */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">First Name</label>
+        <label className="text-sm font-medium text-gray-700">
+          First Name <span className="text-red-500">*</span>
+        </label>
         <input
           className="w-full border rounded-md px-3 py-2"
           value={userFormData.first_name}
@@ -837,7 +851,9 @@ return (
 
       {/* Role */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Role</label>
+        <label className="text-sm font-medium text-gray-700">
+          Role <span className="text-red-500">*</span>
+        </label>
         <select
           className="w-full border rounded-md px-3 py-2"
           value={userFormData.role}
@@ -888,7 +904,9 @@ return (
        {!editMode && (
         <>
         <div className="space-y-1">
-          <label>Email</label>
+          <label className="text-sm font-medium text-gray-700">
+            Email <span className="text-red-500">*</span>
+          </label>
           <input
             className="w-full border rounded-md px-3 py-2"
             value={userFormData.email}
