@@ -43,7 +43,17 @@ import {
   ArrowRight,
   ChevronsLeft,
   ChevronsRight,
+  Eye,
 } from "lucide-react";
+import type { MdrPanelUser } from "@/types/mdr";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ---------- Type Definitions ----------
 interface TrendData {
@@ -119,6 +129,7 @@ const tableData = [
     status: "Inactive",
   },
 ];
+
 
 // ---------- Area chart data (unchanged) ----------
 const areaChartData = [
@@ -376,6 +387,73 @@ export default function DashboardPage() {
     };
   }, [region]);
 
+// active admins dashboard list
+const [activeAdmins, setActiveAdmins] = useState<MdrPanelUser[]>([]);
+const [adminsLoading, setAdminsLoading] = useState(false);
+const [adminPage, setAdminPage] = useState(1);
+const [adminLimit, setAdminLimit] = useState(5);
+const [adminTotalPages, setAdminTotalPages] = useState(1);
+// view dialog state
+const [viewDialogOpen, setViewDialogOpen] = useState(false);
+const [viewUser, setViewUser] = useState<any>(null);
+const [viewLoading, setViewLoading] = useState(false);
+const [totalUsers, setTotalUsers] = useState(0);
+
+// server-side filtering for table
+const fetchActiveAdmins = async () => {
+  try {
+    setAdminsLoading(true);
+
+    const params = new URLSearchParams({
+      role: "admin",
+      status: "active",
+      page: String(adminPage),
+      limit: String(adminLimit),
+      sort: "asc",
+    });
+  
+    const res = await fetch(`/api/mdr-org?${params.toString()}`, {
+      cache: "no-store",
+    });
+  
+    const json = await res.json();
+
+    setActiveAdmins(Array.isArray(json.data) ? json.data : []);
+    setAdminTotalPages(json.pagination?.totalPages ?? 1);
+    setTotalUsers(json.pagination?.total ?? 0);
+  } catch (err) {
+    console.error("Failed to fetch active admins", err);
+    setActiveAdmins([]);
+  } finally {
+    setAdminsLoading(false);
+  }
+};
+
+// ensures table updates immediately
+useEffect(() => {
+  fetchActiveAdmins();
+}, [adminPage, adminLimit])
+
+// handle view user
+const handleView = async (user: MdrPanelUser) => {
+    setViewDialogOpen(true);
+    setViewLoading(true);
+
+try {
+    const res = await fetch(`/api/mdr-org?id=${user.id}`, {
+    cache: "no-store",
+});
+// get full user details
+const json = await res.json();
+setViewUser(json.data ?? null);
+} catch (err) {
+    console.error("View user failed", err);
+    setViewUser(null);
+} finally {
+    setViewLoading(false);
+}};
+
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedRows(tableData.map((row) => row.id));
@@ -543,6 +621,213 @@ export default function DashboardPage() {
               </Card>
             ))}
           </div>
+          {/* New Data Table Section */}
+        <Card className="mt-6 max-w-full">
+          <CardContent className="p-0">
+            {/* Description */}
+            <div className="px-4 py-4 border-b">
+              <h3 className="text-md font-semibold text-gray-800">
+                  Active Admins
+              </h3>
+            </div>
+
+              {adminsLoading ? (
+                <div className="p-4 text-sm text-gray-600">Loading admins...</div>
+            ) : activeAdmins.length === 0 ? (
+                <div className="p-4 text-sm text-gray-600">No active admins</div>
+            ) : (
+              
+            <div className="relative">
+              <Table>
+                <TableHeader className="bg-muted 40">
+                  <TableRow className="border-b last:border-b-0">
+                    <TableHead className="px-4 py-3">
+                      <div className="flex items-center gap-2 text-md text-gray-700">
+                        First Name
+                      </div>
+                    </TableHead>
+                    <TableHead className="px-4 py-3">
+                      <div className="flex items-center gap-2 text-md text-gray-700">
+                        Last Name
+                      </div>
+                    </TableHead>
+                    <TableHead className="px-4 py-3">
+                      <div className="flex items-center gap-2 text-md text-gray-700">
+                        Email
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-center pr-6">
+                      <div className="flex items-center justify-center gap-3 text-md text-gray-700">
+                        Actions
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                  {/* Table Body */}
+                  <TableBody>
+                    {activeAdmins.map((admin) => (
+                      <TableRow key={admin.id}>
+                        <TableCell className="font-medium">
+                          {admin.first_name}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {admin.last_name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {admin.email}
+                        </TableCell>
+                        <TableCell className="flex items-center justify-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleView(admin)}
+                            title="View Admin"
+                          >
+                            <Eye className="h-5 w-5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+            </div>
+              )}
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
+                <div className="text-sm text-gray-600 text-muted-foreground">
+                  {totalUsers} active admin(s).
+                </div>
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={String(adminLimit)}
+                    onValueChange={(value) => {
+                      const newLimit = Number(value);
+                      const firstItemIndex = (adminPage - 1) * adminLimit;
+                      const newPage = Math.floor(firstItemIndex / newLimit) + 1;
+
+                      setAdminLimit(newLimit);
+                      setAdminPage(newPage);
+                    }}
+                  >
+                    <div className="text-sm text-gray-600 text-muted-foreground">
+                      <span>Rows per page</span>
+                    </div>
+
+                    <SelectTrigger className="w-[80px] h-9 text-sm text-muted-foreground">
+                      <SelectValue />
+                    </SelectTrigger>
+
+                    <SelectContent>
+                       {[5, 10, 15].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="text-sm text-gray-600 text-muted-foreground">
+                    Page {adminPage} of {adminTotalPages}
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    {/* First Page */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setAdminPage(1)}
+                      disabled={adminPage === 1}
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    {/* Prev Page */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+                      disabled={adminPage === 1}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    {/* Next Page */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setAdminPage((p) => Math.max(adminTotalPages, p + 1))}
+                      disabled={adminPage >= adminTotalPages}
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    {/* Last Page */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setAdminPage(adminTotalPages)}
+                      disabled={adminPage >= adminTotalPages}
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+          </CardContent>
+        </Card>
+
+          {/* VIEW DIALOG */}
+          <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  User Details
+                </DialogTitle>
+                <DialogDescription>
+                  View user information below.
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* View User Details */}
+              {viewLoading ? (
+                <div className="text-sm text-gray-600">Loading...</div>
+              ) : viewUser ? (
+                <div className="space-y-3 text-sm">
+                  <div><strong>First Name:</strong> {viewUser.first_name}</div>
+                  <div><strong>Last Name:</strong> {viewUser.last_name}</div>
+                  <div><strong>Email:</strong> {viewUser.email}</div>
+                  <div><strong>Role:</strong> {viewUser.role}</div>
+                  <div><strong>Phone 1:</strong> {viewUser.phone1 || "-"}</div>
+                  <div><strong>Phone 2:</strong> {viewUser.phone2 || "-"}</div>
+                  <div>
+                    <strong>Status:</strong>{" "}
+                    {viewUser.isactive ? "Active" : "Inactive"}
+                  </div>
+                  <div>
+                    <strong>MDR ID:</strong>{" "} 
+                    {viewUser.mdr_id ?? "—"}
+                  </div>
+                  <div> 
+                    <strong>Date of Joining:</strong>{" "}
+                    {viewUser.date_of_joining ? new Date(viewUser.date_of_joining).toLocaleDateString() : "—"}  
+                  </div>
+                  <div>
+                    <strong>Last Updated:</strong>{" "}
+                    {viewUser.updated_at ? new Date(viewUser.updated_at).toLocaleDateString() : "—"}    
+                </div>
+              </div>
+              ) : (
+                <div className="text-sm text-gray-600">No user data available.</div>
+              )}
+              <DialogFooter>
+                <Button variant= "outline" onClick={() => setViewDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           {/* Data Table Section */}
           <Card className="border border-gray-200 shadow-sm">
             <CardHeader className="pb-4 border-b">
