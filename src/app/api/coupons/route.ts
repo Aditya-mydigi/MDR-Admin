@@ -85,20 +85,35 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Validate type - database constraint expects 'percentage' or 'flat'
-        // Map user-friendly values: 'percentage' -> 'percentage', 'fixed' -> 'flat'
+        // Validate type - database constraint varies by region
         const normalizedType = type.toLowerCase();
         let typeForDb: string;
 
-        if (normalizedType === "percentage" || normalizedType === "new") {
-            typeForDb = "percentage";
-        } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
-            typeForDb = "flat";
+        if (region.toLowerCase() === "usa") {
+            // USA expects 'percentage' or 'flat'
+            if (normalizedType === "percentage" || normalizedType === "new") {
+                typeForDb = "percentage";
+            } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+                typeForDb = "flat";
+            } else {
+                return NextResponse.json(
+                    { success: false, error: 'USA type must be either "percentage" or "fixed" (flat)' },
+                    { status: 400 }
+                );
+            }
         } else {
-            return NextResponse.json(
-                { success: false, error: 'type must be either "percentage" or "fixed" (flat)' },
-                { status: 400 }
-            );
+            // India expects 'percentage' (though often not used), 'regular', or 'new'
+            // Based on DB constraints, 'percentage' is not allowed in some India DB versions, using 'new' or 'regular'
+            if (normalizedType === "percentage" || normalizedType === "new") {
+                typeForDb = "new";
+            } else if (normalizedType === "fixed" || normalizedType === "regular" || normalizedType === "flat") {
+                typeForDb = "regular";
+            } else {
+                return NextResponse.json(
+                    { success: false, error: 'India type must be either "new" (percentage) or "regular" (fixed)' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Validate amount
