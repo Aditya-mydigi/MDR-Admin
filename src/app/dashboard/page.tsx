@@ -399,6 +399,10 @@ const [viewUser, setViewUser] = useState<any>(null);
 const [viewLoading, setViewLoading] = useState(false);
 const [totalUsers, setTotalUsers] = useState(0);
 
+const [users, setUsers] = useState<any[]>([]);
+const [onlineAdminIds, setOnlineAdminIds] = useState<Set<string>>(new Set());
+
+
 // server-side filtering for table
 const fetchActiveAdmins = async () => {
   try {
@@ -428,6 +432,49 @@ const fetchActiveAdmins = async () => {
     setAdminsLoading(false);
   }
 };
+
+useEffect(() => {
+  async function heartbeat() {
+    await fetch("/api/mdr-org/users/heartbeat", {
+      method: "POST",
+      credentials: "include",
+    });
+  }
+
+  // ping immediately
+  heartbeat();
+
+  // ping every 30 seconds
+  const interval = setInterval(heartbeat, 30_000);
+  return () => clearInterval(interval);
+}, []);
+
+useEffect(() => {
+  console.log("onlineAdminIds:", Array.from(onlineAdminIds));
+}, [onlineAdminIds]);
+
+// collect online admin ids
+useEffect(() => {
+  async function fetchPresence() {
+  try {
+    const res = await fetch("/api/mdr-org/users/presence");
+    const data = await res.json();
+
+    if (!data || !Array.isArray(data.onlineAdminIds)) {
+      console.error("Unexpected presence response:", data);
+      setOnlineAdminIds(new Set());
+      return;
+    }
+
+    setOnlineAdminIds(new Set(data.onlineAdminIds));
+  } catch (err) {
+    console.error("Failed to fetch presence", err);
+    setOnlineAdminIds(new Set());
+  }
+}
+  fetchPresence();
+}, []);
+
 
 // ensures table updates immediately
 useEffect(() => {
@@ -656,6 +703,11 @@ setViewUser(json.data ?? null);
                         Email
                       </div>
                     </TableHead>
+                    <TableHead className="px-4 py-3 text-center">
+                      <div className="flex items-center gap-2 text-md text-gray-700">
+                        Status
+                      </div>
+                    </TableHead>
                     <TableHead className="text-center pr-6">
                       <div className="flex items-center justify-center gap-3 text-md text-gray-700">
                         Actions
@@ -675,6 +727,19 @@ setViewUser(json.data ?? null);
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {admin.email}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {onlineAdminIds.has(admin.id) ? (
+                            <span className="inline-flex items-center gap-1 text-green-600">
+                              <span className="h-2 w-2 rounded-full bg-green-500" />
+                              Online
+                              </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-gray-400">
+                              <span className="h-2 w-2 rounded-full bg-gray-300" />
+                              Offline
+                              </span>
+                          )}
                         </TableCell>
                         <TableCell className="flex items-center justify-center gap-3">
                           <Button

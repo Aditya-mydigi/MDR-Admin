@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt, { VerifyErrors } from "jsonwebtoken";
 import { prismaPanel } from "@/lib/prisma-panel";
+import { onlineAdmins } from "@/lib/presence";
 
 const JWT_SECRET = process.env.JWT_SECRET || "myultrasecretkey123";
 
@@ -39,6 +40,8 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
+    onlineAdmins.set(user.id, Date.now());
+
     return NextResponse.next();
   } catch (err) {
     const error = err as VerifyErrors | Error;
@@ -48,6 +51,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/api/mdr-org/:path*"
+  ],
   runtime: "nodejs",
 };

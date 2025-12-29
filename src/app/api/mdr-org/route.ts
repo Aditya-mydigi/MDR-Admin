@@ -34,7 +34,7 @@ if (id) {
   return NextResponse.json({ data: user });
 }
 ///////////////////////////////////////////////////////////////////
-
+// 
   try {
     const { searchParams } = new URL(req.url);
 
@@ -72,7 +72,7 @@ if (id) {
 
 
     
-    // QUERY DB WITH PAGINATION & FILTERS //
+    // QUERY DB WITH PAGINATION & FILTERS
     const [users, total] = await Promise.all([
       prisma.mdrPanelUser.findMany({
         where,
