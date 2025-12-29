@@ -242,7 +242,7 @@ export default function ReferralTab() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="referral_code">Referral Code *</Label>
+                  <Label htmlFor="referral_code">Referral Code <span className="text-red-500">*</span></Label>
                   <Input
                     id="referral_code"
                     value={formData.referral_code}

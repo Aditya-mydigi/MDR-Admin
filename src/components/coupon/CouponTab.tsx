@@ -314,7 +314,7 @@ export default function CouponTab() {
               <form onSubmit={handleCreateSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="coupon_code">Coupon Code *</Label>
+                    <Label htmlFor="coupon_code">Coupon Code <span className="text-red-500">*</span></Label>
                     <Input
                       id="coupon_code"
                       value={formData.coupon_code}
@@ -329,7 +329,7 @@ export default function CouponTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="type">Type *</Label>
+                    <Label htmlFor="type">Type <span className="text-red-500">*</span></Label>
                     <select
                       id="type"
                       value={formData.type}
@@ -346,7 +346,7 @@ export default function CouponTab() {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Amount *</Label>
+                    <Label htmlFor="amount">Amount <span className="text-red-500">*</span></Label>
                     <Input
                       id="amount"
                       type="number"

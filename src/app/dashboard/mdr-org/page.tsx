@@ -918,7 +918,7 @@ return (
 
         {/* MDR ID */}
         <div className="space-y-1">
-          <label>MDR ID</label>
+          <label className="text-sm font-medium text-gray-700">MDR ID</label>
           <input
             className="w-full border rounded-md px-3 py-2"
             value={userFormData.mdr_id}
