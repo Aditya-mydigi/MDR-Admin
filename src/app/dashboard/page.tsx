@@ -748,14 +748,7 @@ setViewUser(json.data ?? null);
                       variant="outline"
                       size="icon"
                       className="h-9 w-9"
-                      onClick={() =>
-                        setAdminPage((p) =>
-                          Math.min(
-                            Math.ceil(adminPage / pageSize),
-                            p + 1
-                          )
-                        )
-                      }
+                      onClick={() => setAdminPage((p) => Math.max(1, p + 1))}
                       disabled={
                         adminPage === Math.ceil(adminPage / pageSize)
                       }

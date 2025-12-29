@@ -456,7 +456,7 @@ return (
                             </span>
                         </TableCell>
 
-                        {/* ACTIONS */}
+                    {/* ACTIONS */}
                         <TableCell className="text-right pr-6">
                           <div className="flex items-center justify-center gap-3">
                             {/* View */}
