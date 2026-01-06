@@ -316,7 +316,7 @@ return (
       />
 
     {/* MAIN COLUMN */}
-      <div className="flex-1 flex flex-col transition-all duration-300">
+      <div className="flex-1 min-w-0 flex flex-col transition-all duration-300">
         <Header
           title="MDR User Panel"
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -324,7 +324,14 @@ return (
         />
 
     {/* FILTERS / SEARCH */}
-    <div className="mx-5 translate-y-1/4 max-w-[1400px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="
+      mx-2 sm:mx-4 lg:mx-5
+      w-full
+      max-w-full lg:max-w-[1400px]
+      bg-white rounded-xl shadow-sm
+      border border-gray-200
+      overflow-hidden
+      ">
         <div className="p-4 border-b bg-white flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             
             {/* Search */}
@@ -345,7 +352,7 @@ return (
                 />
             </div>
 
-            <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             {/* New User Buton */}
             <Button
                 onClick={() => {
@@ -360,8 +367,8 @@ return (
             </Button>
 
             {/* Role Filter */}
-            <select
-                className="border rounded-md px-3 py-2"
+            <select 
+                className="w-full sm:w-auto border rounded-md px-3 py-2"
                 value={roleFilter}
                 onChange={(e) => {
                     setPage(1);
@@ -375,7 +382,7 @@ return (
 
             {/* Status Filter */}
             <select
-                className="border rounded-md px-3 py-2"
+                className="w-full sm:w-auto border rounded-md px-3 py-2"
                 value={statusFilter}
                 onChange={(e) => {
                     setPage(1);
@@ -416,20 +423,22 @@ return (
         )}
     <Card className="mt-4">
         <CardContent className="p-0">
-              {/* TABLE */}
-            <Table>
+          {/* TABLE */}
+            <Table className="min-w-[900px]">
                 <TableHeader className="bg-muted 40">
                     <TableRow className="border-b last:border-b-0">
                         <TableHead>First Name</TableHead>
                         <TableHead>Last Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Phone</TableHead>
+                        
+                        {/* Hide on mobile devices */}                        
+                        <TableHead className="hidden md:table-cell">Email</TableHead>
+                        <TableHead className="hidden lg:table-cell">Role</TableHead>
+                        <TableHead className="hidden md:table-cell">Phone</TableHead>
+
                         <TableHead>Status</TableHead>
                         <TableHead className="text-center pr-6">
                             Actions
                             </TableHead>
-
                     </TableRow>
                 </TableHeader>
 
@@ -439,9 +448,11 @@ return (
                       <TableRow key={u.id} className="border-b hover:bg-gray-50 transition">
                         <TableCell>{u.first_name}</TableCell>
                         <TableCell>{u.last_name}</TableCell>
-                        <TableCell>{u.email}</TableCell>
-                        <TableCell>{u.role}</TableCell>
-                        <TableCell>{u.phone1 || "-"}</TableCell>
+
+                        {/* Hide on mobile devices */} 
+                        <TableCell className="hidden md:table-cell">{u.email}</TableCell>
+                        <TableCell className="hidden lg:table-cell">{u.role}</TableCell>
+                        <TableCell className="hidden md:table-cell">{u.phone1 || "-"}</TableCell>
                         
                         <TableCell>
                             <span
@@ -496,18 +507,25 @@ return (
                       </TableRow>
                     ))}
                 </TableBody>
-            </Table>
+              </Table>
 
-        <div className="flex items-center justify-between border-t px-4 py-3">
+        <div className="
+          border-t px-4 py-3
+          flex flex-col gap-3
+          sm:flex-row sm:items-center sm:justify-between
+          ">
             {/* Count */}
             <span className="text-sm text-muted-foreground">
                 Showing {users.length} of {totalUsers} users
             </span>
 
             {/* PAGINATION */}
-            <div className="flex items-center justify-end items-center gap-4 border-t px-4 py-3">
+            <div className="
+              flex flex-col gap-3
+              sm:flex-row sm:items-center sm:gap-4
+              ">
+                {/* Rows per page */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {/* Rows per page */}
                     <span>Rows per page</span>
                     
                     <Select
@@ -531,12 +549,12 @@ return (
                 </div>
 
                 {/* Page Info */}
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground text-center">
                         Page {page} of {totalPages}
                     </div>
                 
                 {/* Nav Buttons */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-center gap-1">
                     {/* First Page */}
                     <Button
                         variant="outline"
@@ -544,7 +562,7 @@ return (
                         onClick={() => setPage(1)}
                         disabled={page === 1}
                     >
-                        <ChevronsLeft className="h-5 w-5" />
+                        <ChevronsLeft className="h-4 w-4" />
                     </Button>
 
                     {/* Prev Page */}
@@ -554,7 +572,7 @@ return (
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page === 1}
                     >
-                        <ArrowLeftIcon className="h-5 w-5" />
+                        <ArrowLeftIcon className="h-4 w-4" />
                     </Button>
                     
                     {/* Next Page */}
@@ -564,7 +582,7 @@ return (
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
                     >
-                        <ArrowRightIcon className="h-5 w-5" />
+                        <ArrowRightIcon className="h-4 w-4" />
                     </Button>
                     {/* Last Page */}
                     <Button
@@ -573,7 +591,7 @@ return (
                         onClick={() => setPage(totalPages)}
                         disabled={page === totalPages}
                     >
-                        <ChevronsRight className="h-5 w-5" />
+                        <ChevronsRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -588,7 +606,13 @@ return (
 
     {/* DELETE DIALOG */}
     <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <DialogContent>
+      <DialogContent 
+        className="
+        max-h-[90vh]
+        overflow-y-auto
+        sm:max-w-lg
+        "
+      >
         <DialogHeader>
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogDescription>
@@ -597,7 +621,7 @@ return (
         </DialogHeader>
         
         {/* DELETE CONFIRMATION */}
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 bg-white pt-3">
           <Button
             variant="outline"
             onClick={() => setDeleteDialogOpen(false)}
@@ -619,7 +643,13 @@ return (
 
     {/* EDIT DIALOG */}
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-  <DialogContent>
+  <DialogContent 
+        className="
+        max-h-[90vh]
+        overflow-y-auto
+        sm:max-w-lg
+        "
+      >
     <DialogHeader>
       <DialogTitle>
         {editMode ? "Edit User" : "Create User"}
@@ -631,7 +661,7 @@ return (
       </DialogDescription>
     </DialogHeader>
 
-    <div className="space-y-4">
+    <div className="space-y-4 pb-4">
 
       {/* First Name */}
       <div className="space-y-1">
@@ -735,7 +765,7 @@ return (
        )}
     </div>
 
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 bg-white pt-3">
          <Button
             variant="outline"
             onClick={() => setEditDialogOpen(false)}
@@ -752,7 +782,13 @@ return (
 
     {/* VIEW DIALOG */}
     <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-      <DialogContent>
+      <DialogContent 
+        className="
+        max-h-[90vh]
+        overflow-y-auto
+        sm:max-w-lg
+        "
+      >
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
           <DialogDescription>
@@ -791,7 +827,7 @@ return (
         ) : (
             <div className="text-sm text-gray-600">No user data available.</div>
         )}
-        <DialogFooter>
+        <DialogFooter className="sticky bottom-0 bg-white pt-3">
             <Button variant= "outline" onClick={() => setViewDialogOpen(false)}>
                 Close
             </Button>
