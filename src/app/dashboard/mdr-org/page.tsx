@@ -324,16 +324,8 @@ return (
         />
 
     {/* FILTERS / SEARCH */}
-    <div className="
-      mx-2 sm:mx-4 lg:mx-5
-      w-full
-      max-w-full lg:max-w-[1400px]
-      bg-white rounded-xl shadow-sm
-      border border-gray-200
-      overflow-hidden
-      ">
+    <div className="mx-2 sm:mx-4 lg:mx-5 w-full max-w-full lg:max-w-[1400px] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b bg-white flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            
             {/* Search */}
             <div className="relative w-full sm:w-80">
                 {isSearching ? (
@@ -352,7 +344,7 @@ return (
                 />
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
             {/* New User Buton */}
             <Button
                 onClick={() => {
@@ -365,47 +357,45 @@ return (
                 New User
                 <LucideUserPlus2 className="ml-1 h-5 w-5" />
             </Button>
-
             {/* Role Filter */}
             <select 
-                className="w-full sm:w-auto border rounded-md px-3 py-2"
+                className="w-full max-w-sm sm:w-auto border rounded-md px-3 py-2"
                 value={roleFilter}
                 onChange={(e) => {
                     setPage(1);
                     setRoleFilter(e.target.value as "all" | "admin" | "employee");
                 }}
             >
-                <option value="all">All Roles</option>
-                <option value="admin">Admin</option>
-                <option value="employee">Employee</option>
+                <option value="all" className="text-center">All Roles</option>
+                <option value="admin" className="text-center">Admin</option>
+                <option value="employee" className="text-center">Employee</option>
             </select>
 
             {/* Status Filter */}
             <select
-                className="w-full sm:w-auto border rounded-md px-3 py-2"
+                className="w-full max-w-sm sm:w-auto border rounded-md px-3 py-2"
                 value={statusFilter}
                 onChange={(e) => {
                     setPage(1);
                     setStatusFilter(e.target.value as "active" | "inactive" | "all");
                 }}
             >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="all">All Status</option>
+                <option value="active" className="text-center">Active</option>
+                <option value="inactive" className="text-center">Inactive</option>
+                <option value="all" className="text-center">All Status</option>
             </select>
 
             {/* Sort toggle */}
             <button
-                className="border rounded-md px-3 py-2 hover:bg-gray-100"
+                className="w-full max-w-sm sm:w-auto border rounded-md px-3 py-2 flex items-center justify-center hover:bg-gray-100"
                 onClick={() =>
                     setSortDir((d) => (d === "asc" ? "desc" : "asc"))
                 }
                 title="Sort by First Name"
             >
-                Sort: {sortDir === "asc" ? "A->Z" : "Z->A"}
+              Sort: {sortDir === "asc" ? "A->Z" : "Z->A"}
             </button>
-
-            </div>
+          </div>
         </div>
     </div>
 

@@ -668,10 +668,10 @@ setViewUser(json.data ?? null);
               </Card>
             ))}
           </div>
-          {/* New Data Table Section */}
-        <Card className="mt-6 max-w-full">
+        {/* Active admins table */}
+        <Card className="mt-6 w-full">
           <CardContent className="p-0">
-            {/* Description */}
+            {/* Header */}
             <div className="px-4 py-4 border-b">
               <h3 className="text-md font-semibold text-gray-800">
                   Active Admins
@@ -683,10 +683,11 @@ setViewUser(json.data ?? null);
             ) : activeAdmins.length === 0 ? (
                 <div className="p-4 text-sm text-gray-600">No active admins</div>
             ) : (
-              
-            <div className="relative">
-              <Table>
-                <TableHeader className="bg-muted 40">
+            <>
+            {/* Table Wrapper */}
+            <div className="relative w-full overflow-x-auto">
+              <Table className="min-w-[700px]">
+                <TableHeader>
                   <TableRow className="border-b last:border-b-0">
                     <TableHead className="px-4 py-3">
                       <div className="flex items-center gap-2 text-md text-gray-700">
@@ -698,7 +699,7 @@ setViewUser(json.data ?? null);
                         Last Name
                       </div>
                     </TableHead>
-                    <TableHead className="px-4 py-3">
+                    <TableHead className="hidden sm:table-cell">
                       <div className="flex items-center gap-2 text-md text-gray-700">
                         Email
                       </div>
@@ -722,12 +723,15 @@ setViewUser(json.data ?? null);
                         <TableCell className="font-medium">
                           {admin.first_name}
                         </TableCell>
+
                         <TableCell className="font-medium">
                           {admin.last_name}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+
+                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                           {admin.email}
                         </TableCell>
+
                         <TableCell className="text-sm text-muted-foreground">
                           {onlineAdminIds.has(admin.id) ? (
                             <span className="inline-flex items-center gap-1 text-green-600">
@@ -741,7 +745,8 @@ setViewUser(json.data ?? null);
                               </span>
                           )}
                         </TableCell>
-                        <TableCell className="flex items-center justify-center gap-3">
+
+                        <TableCell className="text-center">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -756,46 +761,49 @@ setViewUser(json.data ?? null);
                   </TableBody>
                 </Table>
             </div>
-              )}
-              {/* Pagination */}
-              <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
-                <div className="text-sm text-gray-600 text-muted-foreground">
+            
+            {/* Pagination */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between gap-4 px-4 py-3 border-t bg-gray-50">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   {totalUsers} active admin(s).
                 </div>
-                <div className="flex items-center gap-4">
-                  <Select
-                    value={String(adminLimit)}
-                    onValueChange={(value) => {
-                      const newLimit = Number(value);
-                      const firstItemIndex = (adminPage - 1) * adminLimit;
-                      const newPage = Math.floor(firstItemIndex / newLimit) + 1;
+                {/* Controls */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Rows per page */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Rows per page</span>
+                    <Select
+                      value={String(adminLimit)}
+                      onValueChange={(value) => {
+                        const newLimit = Number(value);
+                        const firstItemIndex = (adminPage - 1) * adminLimit;
+                        const newPage = Math.floor(firstItemIndex / newLimit) + 1;
 
-                      setAdminLimit(newLimit);
-                      setAdminPage(newPage);
-                    }}
-                  >
-                    <div className="text-sm text-gray-600 text-muted-foreground">
-                      <span>Rows per page</span>
-                    </div>
+                        setAdminLimit(newLimit);
+                        setAdminPage(newPage);
+                      }}
+                    >
 
-                    <SelectTrigger className="w-[80px] h-9 text-sm text-muted-foreground">
-                      <SelectValue />
-                    </SelectTrigger>
+                      <SelectTrigger className="w-[80px] h-9">
+                        <SelectValue />
+                      </SelectTrigger>
 
-                    <SelectContent>
+                      <SelectContent>
                        {[5, 10, 15].map((n) => (
                           <SelectItem key={n} value={String(n)}>
                             {n}
                           </SelectItem>
                         ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="text-sm text-gray-600 text-muted-foreground">
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Page info */}
+                  <div className="text-sm text-muted-foreground text-center">
                     Page {adminPage} of {adminTotalPages}
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     {/* First Page */}
                     <Button
                       variant="outline"
@@ -839,7 +847,8 @@ setViewUser(json.data ?? null);
                   </div>
                 </div>
               </div>
-
+            </>
+            )}
           </CardContent>
         </Card>
 
