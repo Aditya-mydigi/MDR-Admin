@@ -130,7 +130,7 @@ export async function POST(req: Request) {
       data: {
         first_name: body.first_name,
         last_name: body.last_name,
-        email: body.email,
+        email: body.email?.toLowerCase(),
         role: normalizedRole,
         phone1: body.phone1,
         phone2: body.phone2,
@@ -193,7 +193,7 @@ export async function PUT(req: Request) {
       data: {
         first_name: body.first_name,
         last_name: body.last_name,
-        email: body.email,
+        email: body.email?.toLowerCase(),
         role: normalizedRole,
         phone1: body.phone1,
         phone2: body.phone2,

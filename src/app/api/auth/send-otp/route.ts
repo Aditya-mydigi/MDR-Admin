@@ -16,7 +16,10 @@ export async function POST(req: Request) {
 
     const user = await prismaPanel.mdrPanelUser.findFirst({
       where: {
-        email: lower,
+        email: {
+          equals: lower,
+          mode: 'insensitive'
+        },
         isactive: true,
         role: "admin",
       },
