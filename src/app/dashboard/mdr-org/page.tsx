@@ -2,9 +2,10 @@
 "use client";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { toast } from "sonner";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
-import { MdrPanelUser } from "../../../../prisma/generated/panel";
+import { mdrPanelUser } from "../../../../prisma/generated/panel";
 import { 
     Edit, 
     Trash2, 
@@ -56,7 +57,7 @@ export default function MDROrgPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   // load users
-  const [users, setUsers] = useState<MdrPanelUser[]>([]);
+  const [users, setUsers] = useState<mdrPanelUser[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -69,6 +70,7 @@ export default function MDROrgPage() {
   const [editMode, setEditMode] = useState(false);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   // table controls
   const [searchText, setSearchText] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "employee">("all");
@@ -83,6 +85,12 @@ export default function MDROrgPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewUser, setViewUser] = useState<any>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  // active admins (dashboard list)
+  const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminLimit, setAdminLimit] = useState(5);
+  const [adminTotalPages, setAdminsTotalPages] = useState(1);
   
   // form state
   const initialUserForm = {
@@ -180,11 +188,13 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("API error:", data);
-      return;
+        setFormError(data.error || "Failed to save user");
+        toast.error(data.error || "Failed to save user");
+        return;
     }
 
     // success
+    toast.success(editMode ? "User updated successfully" : "User created successfully");
     setEditDialogOpen(false);
     setEditMode(false);
     setEditUserId(null);
@@ -203,7 +213,7 @@ const handleSubmit = async () => {
 
 
 // HANDLE EDIT USER
-const handleEdit = (user: MdrPanelUser) => {
+const handleEdit = (user: mdrPanelUser) => {
   //open dialog in edit mode
   setEditMode(true);
   //store who is being edited
@@ -218,6 +228,7 @@ const handleEdit = (user: MdrPanelUser) => {
     mdr_id: user.mdr_id ?? "",
     isactive: user.isactive,
   });
+  setFormError(null);
   setEditDialogOpen(true);
 };
 
@@ -249,7 +260,7 @@ setDeleteUserId(null);
 
 
 // HANDLE VIEW USER
-const handleView = async (user: MdrPanelUser) => {
+const handleView = async (user: mdrPanelUser) => {
     setViewDialogOpen(true);
     setViewLoading(true);
 
@@ -268,7 +279,7 @@ setViewUser(json.data ?? null);
 }};
 
 // HANDLE TOGGLE STATUS
-const handleToggleStatus = async (user: MdrPanelUser) => {
+const handleToggleStatus = async (user: mdrPanelUser) => {
   try {
     const newStatus = !user.isactive;
 
@@ -351,6 +362,7 @@ return (
                 onClick={() => {
                     setEditMode(false);
                     setEditUserId(null);
+                    setFormError(null);
                     setUserFormData(initialUserForm);
                     setEditDialogOpen(true);
                 }}
@@ -631,11 +643,19 @@ return (
       </DialogDescription>
     </DialogHeader>
 
+    {formError && (
+      <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-md text-sm font-medium animate-in fade-in zoom-in duration-200">
+        {formError}
+      </div>
+    )}
+
     <div className="space-y-4">
 
       {/* First Name */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">First Name</label>
+        <label className="text-sm font-medium text-gray-700">
+          First Name <span className="text-red-500">*</span>
+        </label>
         <input
           className="w-full border rounded-md px-3 py-2"
           value={userFormData.first_name}
@@ -659,7 +679,9 @@ return (
 
       {/* Role */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Role</label>
+        <label className="text-sm font-medium text-gray-700">
+          Role <span className="text-red-500">*</span>
+        </label>
         <select
           className="w-full border rounded-md px-3 py-2"
           value={userFormData.role}
@@ -710,7 +732,9 @@ return (
        {!editMode && (
         <>
         <div className="space-y-1">
-          <label>Email</label>
+          <label className="text-sm font-medium text-gray-700">
+            Email <span className="text-red-500">*</span>
+          </label>
           <input
             className="w-full border rounded-md px-3 py-2"
             value={userFormData.email}
@@ -722,7 +746,7 @@ return (
 
         {/* MDR ID */}
         <div className="space-y-1">
-          <label>MDR ID</label>
+          <label className="text-sm font-medium text-gray-700">MDR ID</label>
           <input
             className="w-full border rounded-md px-3 py-2"
             value={userFormData.mdr_id}

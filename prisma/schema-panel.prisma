@@ -8,7 +8,9 @@ datasource panel {
   url      = env("DATABASE_URL_MDR_PANEL")
 }
 
-model MdrPanelUser {
+model mdrPanelUser {
+  @@map("mdr_panel_users")
+
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @panel.Uuid
   mdr_id          String?   @unique @panel.VarChar(15)
   email           String    @unique @panel.VarChar(200)
@@ -17,11 +19,9 @@ model MdrPanelUser {
   phone1          String    @panel.VarChar(15)
   phone2          String?   @panel.VarChar(15)
   role            user_role @default(employee)
-  isactive        Boolean   @default(true)
   date_of_joining DateTime  @default(now()) @panel.Timestamptz(6)
-  updated_at      DateTime  @default(now()) @updatedAt @panel.Timestamptz(6)
-
-  @@map("mdr_panel_users")
+  updated_at      DateTime  @default(now()) @panel.Timestamptz(6)
+  isactive        Boolean   @default(true)
 }
 
 enum user_role {

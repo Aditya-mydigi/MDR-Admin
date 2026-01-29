@@ -257,7 +257,7 @@ export function PlansTab() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="plan_id">Plan ID *</Label>
+                    <Label htmlFor="plan_id">Plan ID <span className="text-red-500">*</span></Label>
                     <Input
                       id="plan_id"
                       value={formData.plan_id}
@@ -269,7 +269,7 @@ export function PlansTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="amount">Amount *</Label>
+                    <Label htmlFor="amount">Amount <span className="text-red-500">*</span></Label>
                     <Input
                       id="amount"
                       type="number"
@@ -294,7 +294,7 @@ export function PlansTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="validity_in_days">Validity (Days) *</Label>
+                    <Label htmlFor="validity_in_days">Validity (Days) <span className="text-red-500">*</span></Label>
                     <Input
                       id="validity_in_days"
                       type="number"

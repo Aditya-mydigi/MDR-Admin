@@ -23,8 +23,20 @@ export async function generateAndSendOtp(email: string, role: string) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: "Your MDR Admin OTP",
-    text: `Your OTP for ${role} login is ${otp}. It expires in 10 minutes.`,
+    subject: "MDR Administrator Login – One-Time Password (OTP)",
+    text: `Hello,
+
+    You have requested to log in as an Administrator for the MDR system.
+
+    Your One-Time Password (OTP) for ${role} administrator login is:
+    ${otp}
+
+    This OTP is valid for the next 10 minutes. Please do not share it with anyone.
+
+    If you did not request this login, please ignore this email or contact support immediately.
+
+    Regards,
+    MDR Support Team`,
   };
 
   try {

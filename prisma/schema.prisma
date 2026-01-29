@@ -30,6 +30,28 @@ model allergies_data {
   users                      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
+model coupons {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
+  coupon_code    String          @unique @usa.VarChar(50)
+  type           String?         @usa.VarChar(20)
+  amount         Decimal         @usa.Decimal
+  description    String?
+  is_active      Boolean         @default(true)
+  start_date     DateTime?       @usa.Timestamptz(6)
+  end_date       DateTime?       @usa.Timestamptz(6)
+  usage_limit    Int?
+  used_count     Int             @default(0)
+  mdr_id         String?         @usa.VarChar(50)
+  created_at     DateTime        @default(now()) @usa.Timestamptz(6)
+  updated_at     DateTime        @default(now()) @usa.Timestamptz(6)
+  referral_code  String?
+  visible        Boolean?        @default(false)
+  referral_codes referral_codes? @relation(fields: [referral_code], references: [referral_code], onDelete: NoAction, onUpdate: NoAction, map: "fk_coupons_referral_code")
+
+  @@index([is_active, start_date, end_date], map: "coupons_active_idx")
+  @@index([mdr_id], map: "coupons_mdr_idx")
+}
+
 model favshealthhub {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
   user_id    String    @usa.Uuid
@@ -106,6 +128,27 @@ model plans {
   HealthHub         Boolean? @default(true)
   Members           Boolean? @default(true)
   ABHA              Boolean? @default(true)
+}
+
+model referral_codes {
+  id              String    @id(map: "referral_plans_pkey") @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
+  referral_code   String    @unique(map: "referral_plans_referral_code_key")
+  free_trial_days Int?      @default(0)
+  created_at      DateTime? @default(now()) @usa.Timestamp(6)
+  updated_at      DateTime? @default(now()) @usa.Timestamp(6)
+  SmartVitals     Boolean?  @default(false)
+  Medication      Boolean?  @default(false)
+  Vaccines        Boolean?  @default(false)
+  HealthSnapShot  Boolean?  @default(false)
+  Records         Boolean?  @default(false)
+  Prenatal        Boolean?  @default(false)
+  HealthHub       Boolean?  @default(false)
+  Members         Boolean?  @default(false)
+  ABHA            Boolean?  @default(false)
+  COUNT           Int?      @default(0)
+  MAX             Int?      @default(0)
+  code_id         String?
+  coupons         coupons[]
 }
 
 model referrals {
@@ -185,50 +228,6 @@ model users {
   referrals_referrals_user_mdr_idTousers        referrals[]       @relation("referrals_user_mdr_idTousers")
   rewards                                       rewards[]
   user_coupon_log                               user_coupon_log[]
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model coupons {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
-  coupon_code    String          @unique @usa.VarChar(50)
-  type           String?         @usa.VarChar(20)
-  amount         Decimal         @usa.Decimal(10, 2)
-  description    String?
-  is_active      Boolean         @default(true)
-  start_date     DateTime?       @usa.Timestamptz(6)
-  end_date       DateTime?       @usa.Timestamptz(6)
-  usage_limit    Int?
-  used_count     Int             @default(0)
-  mdr_id         String?         @usa.VarChar(50)
-  created_at     DateTime        @default(now()) @usa.Timestamptz(6)
-  updated_at     DateTime        @default(now()) @usa.Timestamptz(6)
-  referral_code  String?
-  visible        Boolean?        @default(false)
-  referral_codes referral_codes? @relation(fields: [referral_code], references: [referral_code], map: "fk_coupons_referral_code")
-
-  @@index([is_active, start_date, end_date], map: "coupons_active_idx")
-  @@index([mdr_id], map: "coupons_mdr_idx")
-}
-
-model referral_codes {
-  id              String    @id(map: "referral_plans_pkey") @default(dbgenerated("gen_random_uuid()")) @usa.Uuid
-  referral_code   String    @unique(map: "referral_plans_referral_code_key")
-  free_trial_days Int?      @default(0)
-  created_at      DateTime? @default(now()) @usa.Timestamp(6)
-  updated_at      DateTime? @default(now()) @usa.Timestamp(6)
-  SmartVitals     Boolean?  @default(false)
-  Medication      Boolean?  @default(false)
-  Vaccines        Boolean?  @default(false)
-  HealthSnapShot  Boolean?  @default(false)
-  Records         Boolean?  @default(false)
-  Prenatal        Boolean?  @default(false)
-  HealthHub       Boolean?  @default(false)
-  Members         Boolean?  @default(false)
-  ABHA            Boolean?  @default(false)
-  COUNT           Int?      @default(0)
-  MAX             Int?      @default(0)
-  code_id         String?
-  coupons         coupons[]
 }
 
 enum gender_enum {
