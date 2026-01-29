@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ import {
   ChevronsRight,
   Eye,
 } from "lucide-react";
-import type { mdrPanelUser } from "@/types/mdr";
+import type { MdrPanelUser } from "@/types/mdr";
 import {
   Dialog,
   DialogContent,
@@ -291,17 +291,17 @@ export default function DashboardPage() {
             const rounded = Math.round(num);
 
             // OPTION 1:
-            // "Total" should always show INDIAN currency (₹)
+            // "Total" should always show INDIAN currency (Γé╣)
             if (region === "Total") {
-              return `₹${rounded.toLocaleString("en-IN")}`;
+              return `Γé╣${rounded.toLocaleString("en-IN")}`;
             }
 
-            // India → ₹
+            // India ΓåÆ Γé╣
             if (region === "India") {
-              return `₹${rounded.toLocaleString("en-IN")}`;
+              return `Γé╣${rounded.toLocaleString("en-IN")}`;
             }
 
-            // USA → $
+            // USA ΓåÆ $
             if (region === "USA") {
               return `$${rounded.toLocaleString("en-US")}`;
             }
@@ -388,7 +388,7 @@ export default function DashboardPage() {
   }, [region]);
 
 // active admins dashboard list
-const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
+const [activeAdmins, setActiveAdmins] = useState<MdrPanelUser[]>([]);
 const [adminsLoading, setAdminsLoading] = useState(false);
 const [adminPage, setAdminPage] = useState(1);
 const [adminLimit, setAdminLimit] = useState(5);
@@ -482,7 +482,7 @@ useEffect(() => {
 }, [adminPage, adminLimit])
 
 // handle view user
-const handleView = async (user: mdrPanelUser) => {
+const handleView = async (user: MdrPanelUser) => {
     setViewDialogOpen(true);
     setViewLoading(true);
 
@@ -872,15 +872,15 @@ setViewUser(json.data ?? null);
                   </div>
                   <div>
                     <strong>MDR ID:</strong>{" "} 
-                    {viewUser.mdr_id ?? "—"}
+                    {viewUser.mdr_id ?? "ΓÇö"}
                   </div>
                   <div> 
                     <strong>Date of Joining:</strong>{" "}
-                    {viewUser.date_of_joining ? new Date(viewUser.date_of_joining).toLocaleDateString() : "—"}  
+                    {viewUser.date_of_joining ? new Date(viewUser.date_of_joining).toLocaleDateString() : "ΓÇö"}  
                   </div>
                   <div>
                     <strong>Last Updated:</strong>{" "}
-                    {viewUser.updated_at ? new Date(viewUser.updated_at).toLocaleDateString() : "—"}    
+                    {viewUser.updated_at ? new Date(viewUser.updated_at).toLocaleDateString() : "ΓÇö"}    
                 </div>
               </div>
               ) : (
