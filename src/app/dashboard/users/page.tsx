@@ -56,6 +56,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import clsx from "clsx";
+import { format } from "date-fns";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 
@@ -608,14 +609,9 @@ export default function UsersPage() {
                                       if (!user.expiry_date) return "Lifetime";
                                       const expiry = new Date(user.expiry_date);
                                       const now = new Date();
-                                      if (expiry < now) return "Expired";
+                                      if (expiry < now) return `Expired (${format(expiry, "dd MMM yyyy")})`;
                                       
-                                      const diffTime = expiry.getTime() - now.getTime();
-                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                      const months = Math.floor(diffDays / 30);
-                                      
-                                      if (months === 0) return `${diffDays} days left`;
-                                      return `${months} ${months === 1 ? 'month' : 'months'} left`;
+                                      return format(expiry, "dd MMM yyyy");
                                     })()}
                                   </span>
                                 </div>
