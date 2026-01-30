@@ -221,9 +221,18 @@ export default function ReferralTab() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">Referral Codes</h3>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog 
+          open={dialogOpen} 
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
-            <Button onClick={() => setEditMode(false)}>
+            <Button onClick={() => {
+              setEditMode(false);
+              resetForm();
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Add Referral Code
             </Button>

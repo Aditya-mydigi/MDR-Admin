@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { toast } from "sonner";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
-import { mdrPanelUser } from "../../../../prisma/generated/panel";
+import type { mdrPanelUser } from "@/types/mdr";
 import { 
     Edit, 
     Trash2, 
