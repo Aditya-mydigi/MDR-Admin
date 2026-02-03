@@ -102,8 +102,8 @@ export function PlansTab() {
       const data = await response.json();
 
       if (data.success) {
-        setPlans(data.data);
-        setTotalPages(data.totalPages);
+        setPlans(data.data || []);
+        setTotalPages(data.totalPages || 1);
       } else {
         setError(data.error || "Failed to fetch plans");
         toast.error(data.error || "Failed to fetch plans");
@@ -131,6 +131,9 @@ export function PlansTab() {
         body: JSON.stringify({
           ...formData,
           region,
+          // Force regional features to false if they are not applicable
+          ABHA: region === "usa" ? false : formData.ABHA,
+          Records: region === "india" ? false : formData.Records,
         }),
       });
 
@@ -366,7 +369,10 @@ export function PlansTab() {
                             "visibility",
                             "description_line1",
                             "description_line2",
-                          ].includes(key)
+                          ].includes(key) &&
+                          // Hide ABHA for US, Hide Records for India
+                          !(region === "usa" && key === "ABHA") &&
+                          !(region === "india" && key === "Records")
                       )
                       .map((feature) => (
                         <div key={feature} className="flex items-center space-x-2">
@@ -474,6 +480,16 @@ export function PlansTab() {
                       {plan.Medication && (
                         <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
                           Medication
+                        </span>
+                      )}
+                      {plan.Records && (
+                        <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
+                          Records
+                        </span>
+                      )}
+                      {plan.ABHA && (
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">
+                          ABHA
                         </span>
                       )}
                       {plan.HealthHub && (

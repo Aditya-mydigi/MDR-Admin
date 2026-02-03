@@ -124,7 +124,7 @@ export async function PUT(
             }
         }
 
-        // Validate type if provided
+        // Validate type if provided - database constraint varies by region
         let typeForDb: string | undefined;
         if (type !== undefined) {
             const normalizedType = type.toLowerCase();

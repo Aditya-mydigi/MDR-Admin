@@ -8,7 +8,7 @@ export async function PATCH(
     try {
         const { id } = await params;
         const body = await request.json();
-        const { region, active } = body;
+        const { region, active, plan_id, expiry_date } = body;
 
         const isIndia = region?.toLowerCase() === "india";
         const prisma = isIndia ? prismaIndia : prismaUSA;
@@ -19,28 +19,35 @@ export async function PATCH(
 
         if (active) {
             const today = new Date();
-            // Calculate expiry date (default to 1 year = 365 days if plan not found)
-            let validityDays = 365;
+            let finalExpiryDate: Date;
 
-            try {
-                const plan = await (prisma as any).plans.findUnique({
-                    where: { plan_id: "1" },
-                });
-                if (plan && plan.validity_in_days) {
-                    validityDays = plan.validity_in_days;
+            if (expiry_date) {
+                finalExpiryDate = new Date(expiry_date);
+            } else {
+                // Calculate expiry date (default to 1 year = 365 days if plan not found)
+                let validityDays = 365;
+                const targetPlanId = plan_id || "1";
+
+                try {
+                    const plan = await (prisma as any).plans.findUnique({
+                        where: { plan_id: targetPlanId },
+                    });
+                    if (plan && plan.validity_in_days) {
+                        validityDays = plan.validity_in_days;
+                    }
+                } catch (err) {
+                    console.error("Plan lookup failed, using default 365 days", err);
                 }
-            } catch (err) {
-                console.error("Plan lookup failed, using default 365 days", err);
-            }
 
-            const expiryDate = new Date(today);
-            expiryDate.setDate(expiryDate.getDate() + validityDays);
+                finalExpiryDate = new Date(today);
+                finalExpiryDate.setDate(finalExpiryDate.getDate() + validityDays);
+            }
 
             updateData = {
                 ...updateData,
-                plan_id: "1",
+                plan_id: plan_id || "1",
                 payment_date: today,
-                expiry_date: expiryDate,
+                expiry_date: finalExpiryDate,
             };
 
             if (isIndia) {

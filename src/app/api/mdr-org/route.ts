@@ -34,7 +34,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: user });
   }
   ///////////////////////////////////////////////////////////////////
-
   try {
     const { searchParams } = new URL(req.url);
 

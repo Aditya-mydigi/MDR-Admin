@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { toast } from "sonner";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
-import { mdrPanelUser } from "../../../../prisma/generated/panel";
+import type { mdrPanelUser } from "@/types/mdr";
 import { 
     Edit, 
     Trash2, 
@@ -92,8 +92,6 @@ export default function MDROrgPage() {
   const [adminLimit, setAdminLimit] = useState(5);
   const [adminTotalPages, setAdminsTotalPages] = useState(1);
   
-
-  
   // form state
   const initialUserForm = {
     first_name: "",
@@ -154,39 +152,6 @@ useEffect(() => {
   fetchUsers();
 }, [page, limit, debouncedSearch, statusFilter, roleFilter,sortDir]);
 
-useEffect(() => {
-    fetchActiveAdmins();
-}, [adminPage, adminLimit]);
-
-const fetchActiveAdmins = async () => {
-    try {
-        setAdminsLoading(true);
-
-        const params = new URLSearchParams({
-            role: "admin",
-            status: "active",
-            sort: "asc",
-            page: String(adminPage),
-            limit: String(adminLimit),
-        });
-
-        const res = await fetch(`/api/mdr-org?${params.toString()}`, {
-            cache: "no-store",
-        });
-
-        const json = await res.json();
-
-        setActiveAdmins(Array.isArray(json.data) ? json.data : []);
-        setAdminsTotalPages(json.pagination?.totalPages ?? 1);
-
-    } catch (err) {
-        console.error("Failed to fetch active admins", err);
-        setActiveAdmins([]);
-    } finally {
-        setAdminsLoading(false);
-    }
-}
-
 
 // HANDLE NEW USER  
 const handleSubmit = async () => {
@@ -237,7 +202,6 @@ const handleSubmit = async () => {
 
     await Promise.all([
         fetchUsers(),
-        fetchActiveAdmins(),
     ]);
 
   } catch (err) {
@@ -284,8 +248,6 @@ await fetch("/api/mdr-org", {
 
 // remove from UI
 setUsers((prev) => prev.filter((u) => u.id !== deleteUserId));
-
-await fetchActiveAdmins();
 
 setDeleteDialogOpen(false);
 setDeleteUserId(null);
@@ -338,7 +300,6 @@ const handleToggleStatus = async (user: mdrPanelUser) => {
         u.id === user.id ? { ...u, isactive: newStatus } : u
       )
     );
-    await fetchActiveAdmins();
 
   } catch (err) {
     console.error("Error toggling status:", err);
@@ -631,144 +592,11 @@ return (
             </div>
         </CardContent> 
     </Card>
-
-    {/* Active Admins */}
-    <Card className="mt-6 max-w-[600px]">
-        <CardContent className="p-0">
-            {/* Description */}
-            <div className="px-4 py-3 border-b">
-                <h3 className="text-md font-semibold text-gray-800">
-                    Active Admins
-                </h3>
-            </div>
-
-            {adminsLoading ? (
-                <div className="p-4 text-sm text-gray-600">Loading admins...</div>
-            ) : activeAdmins.length === 0 ? (
-                <div className="p-4 text-sm text-gray-600">No active admins</div>
-            ) : (
-
-            <div className="relative">
-                <Table>
-                    <TableHeader className="bg-muted 40">
-                        <TableRow className="border-b last:border-b-0">
-                            <TableHead>First Name</TableHead>
-                            <TableHead>Last Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead className="text-center pr-6">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    
-                    {/* Table Body */}
-                    <TableBody>
-                        {activeAdmins.map((admin) => (
-                            <TableRow key={admin.id}>
-                                <TableCell className="font-medium">{admin.first_name}</TableCell>
-                                <TableCell className="font-medium">{admin.last_name}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{admin.email}</TableCell>
-                                <TableCell className="text-center">
-                                    <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleView(admin)}
-                                    title="View Admin"
-                                    >
-                                        <EyeIcon className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-            )}
-        
-            
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between border-t px-4 py-3">
-                {/* Rows per page */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>
-                        Rows per page</span>
-                        
-                    <Select
-                        value={String(adminLimit)}
-                        onValueChange={(value) => {
-                            setAdminPage(1);
-                            setAdminLimit(Number(value));
-                        }}
-                    >
-                        <SelectTrigger className="w-[80px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        
-                        <SelectContent>
-                            {[5, 10, 15].map((n) => (
-                                <SelectItem key={n} value={String(n)}>
-                                    {n}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                
-                {/* Page controls */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setAdminPage(1)}
-                        disabled={adminPage === 1}
-                        title="First page"
-                    >
-                        <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
-                        disabled={adminPage === 1}
-                        title="Previous page"
-                    >
-                        <ArrowLeftIcon className="h-4 w-4" />
-                    </Button>
-                    
-                    <span>
-                        Page {adminPage} of {adminTotalPages}
-                    </span>
-                    
-                    <Button
-                        variant="outline"  
-                        size="icon"
-                        onClick={() =>
-                            setAdminPage((p) => Math.min(adminTotalPages, p + 1))
-                        }
-                        disabled={adminPage === adminTotalPages}
-                        title="Next page"
-                    >
-                        <ArrowRightIcon className="h-4 w-4" />
-                    </Button>
-                    
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setAdminPage(adminTotalPages)}
-                        disabled={adminPage === adminTotalPages}
-                        title="Last page"
-                    >
-                        <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-        </CardContent>
-    </Card>
 </>
-        )}
-        </main>
-        </div>
-        </div>
+)}
+</main>
+</div>
+</div>
 
     {/* DELETE DIALOG */}
     <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

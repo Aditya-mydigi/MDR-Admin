@@ -49,9 +49,14 @@ import {
   Copy,
   Search,
   Loader2,
+  PlusCircle,
+  Calendar,
+  CreditCard,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import clsx from "clsx";
+import { format } from "date-fns";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/header";
 
@@ -67,6 +72,7 @@ type User = {
   created_at?: string | null;
   region?: string;
   user_plan_active: boolean;
+  plan_id?: string | null;
 };
 
 export default function UsersPage() {
@@ -97,6 +103,14 @@ export default function UsersPage() {
     "total"
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Subscription Dialog States
+  const [subDialogOpen, setSubDialogOpen] = useState(false);
+  const [userForSub, setUserForSub] = useState<User | null>(null);
+  const [plans, setPlans] = useState<{ india: any[]; usa: any[] }>({ india: [], usa: [] });
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [customExpiry, setCustomExpiry] = useState("");
+  const [isUpdatingSub, setIsUpdatingSub] = useState(false);
 
   // Sidebar persistence
   useEffect(() => {
@@ -126,6 +140,7 @@ export default function UsersPage() {
     created_at: u.created_at ?? u.createdAt ?? null,
     region: (u.region ?? "").toLowerCase(),
     user_plan_active: !!u.user_plan_active,
+    plan_id: u.plan_id ?? u.planId ?? null,
   });
 
   const fetchUsers = async (isSearch = false) => {
@@ -198,6 +213,22 @@ export default function UsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [currentPage, pageSize, statusFilter, regionFilter]);
+
+  // Fetch plans
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await fetch("/api/plans");
+        const data = await res.json();
+        if (data.success) {
+          setPlans(data.plans);
+        }
+      } catch (err) {
+        console.error("Failed to fetch plans", err);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   // Client-side filtering for region and status REMOVED (now handled by API)
   // We kept sorting here if needed, or strictly rely on API order.
@@ -324,6 +355,35 @@ export default function UsersPage() {
           u.id === user.id ? { ...u, user_plan_active: !active } : u
         )
       );
+    }
+  };
+
+  const handleAddSubscription = async () => {
+    if (!userForSub || !selectedPlanId) return;
+
+    setIsUpdatingSub(true);
+    try {
+      const res = await fetch(`/api/users/${userForSub.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          region: userForSub.region,
+          active: true,
+          plan_id: selectedPlanId,
+          expiry_date: customExpiry || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update");
+
+      toast.success("Subscription added successfully");
+      setSubDialogOpen(false);
+      fetchUsers(); // Refresh list
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update");
+    } finally {
+      setIsUpdatingSub(false);
     }
   };
 
@@ -480,7 +540,10 @@ export default function UsersPage() {
                             </TableCell>
 
                             <TableCell>
-                              <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+                              <div className="flex flex-col items-center space-y-1">
+                                <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                                <div className="h-3 w-12 bg-muted/60 rounded animate-pulse" />
+                              </div>
                             </TableCell>
                             <TableCell />
                           </TableRow>
@@ -534,12 +597,24 @@ export default function UsersPage() {
                               </TableCell>
 
                               <TableCell className="text-center">
-                                <Switch
-                                  checked={user.user_plan_active}
-                                  onCheckedChange={(checked) =>
-                                    handleToggleSubscription(user, checked)
-                                  }
-                                />
+                                <div className="flex flex-col items-center">
+                                  <span className="font-bold text-sm">
+                                    {user.plan_id 
+                                      ? user.plan_id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                                      : "Free Tier"}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {(() => {
+                                      if (!user.user_plan_active) return "Inactive";
+                                      if (!user.expiry_date) return "Lifetime";
+                                      const expiry = new Date(user.expiry_date);
+                                      const now = new Date();
+                                      if (expiry < now) return `Expired (${format(expiry, "dd MMM yyyy")})`;
+                                      
+                                      return format(expiry, "dd MMM yyyy");
+                                    })()}
+                                  </span>
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <DropdownMenu>
@@ -560,6 +635,22 @@ export default function UsersPage() {
                                     >
                                       <RotateCcw className="mr-2 h-4 w-4" />
                                       Reset Password
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setUserForSub(user);
+                                        setSelectedPlanId(user.plan_id || "");
+                                        // Set default expiry to current one if exists or empty
+                                        if (user.expiry_date) {
+                                          setCustomExpiry(new Date(user.expiry_date).toISOString().split('T')[0]);
+                                        } else {
+                                          setCustomExpiry("");
+                                        }
+                                        setSubDialogOpen(true);
+                                      }}
+                                    >
+                                      <CreditCard className="mr-2 h-4 w-4" />
+                                      Add Subscription
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -793,6 +884,68 @@ export default function UsersPage() {
                   </>
                 ) : (
                   "Delete User"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add Subscription Dialog */}
+        <Dialog open={subDialogOpen} onOpenChange={setSubDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add/Edit Subscription</DialogTitle>
+              <DialogDescription>
+                Update the subscription plan and validity for {userForSub?.first_name} {userForSub?.last_name}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Select Plan</Label>
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(userForSub?.region?.toLowerCase() === "india" ? plans.india : plans.usa).map((plan) => (
+                      <SelectItem key={plan.plan_id} value={plan.plan_id}>
+                        {plan.plan_id.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} - {plan.validity}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Custom Expiry Date (Optional)</Label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={customExpiry}
+                    onChange={(e) => setCustomExpiry(e.target.value)}
+                    className="pl-10"
+                  />
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Leave empty to use the plan's default validity.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSubDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddSubscription} disabled={isUpdatingSub || !selectedPlanId}>
+                {isUpdatingSub ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Update Subscription"
                 )}
               </Button>
             </DialogFooter>
