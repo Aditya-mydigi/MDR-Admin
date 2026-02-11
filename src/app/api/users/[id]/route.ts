@@ -1,6 +1,64 @@
 import { NextResponse } from "next/server";
 import { prismaIndia, prismaUSA } from "@/lib/prisma";
 
+export async function GET(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const { searchParams } = new URL(request.url);
+        const region = searchParams.get("region")?.toLowerCase() || "india";
+
+        const isIndia = region === "india";
+        const prisma = isIndia ? prismaIndia : prismaUSA;
+
+        // Fetch user basic info
+        const user = await (prisma as any).users.findUnique({
+            where: { id },
+        });
+
+        if (!user) {
+            return NextResponse.json(
+                { success: false, message: "User not found" },
+                { status: 404 }
+            );
+        }
+
+        // Fetch transactions (payment_records)
+        // Using both clientid (UUID) and mdr_id to link transactions
+        let transactions = [];
+        const queryOptions: any = {
+            where: {
+                OR: [
+                    { clientid: id },
+                    user.mdr_id ? { mdr_id: user.mdr_id } : undefined
+                ].filter(Boolean)
+            },
+            orderBy: { datetime: "desc" },
+        };
+
+        // USA schema might not have the plans relation defined in Prisma
+        if (isIndia) {
+            queryOptions.include = { plans: true };
+        }
+
+        transactions = await (prisma as any).payment_records.findMany(queryOptions);
+
+        return NextResponse.json({
+            success: true,
+            user: { ...user, region: isIndia ? "India" : "USA" },
+            transactions
+        });
+    } catch (error: any) {
+        console.error("❌ Error fetching user details:", error);
+        return NextResponse.json(
+            { success: false, message: error.message || "Failed to fetch user details" },
+            { status: 500 }
+        );
+    }
+}
+
 export async function PATCH(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -51,7 +109,7 @@ export async function PATCH(
             };
 
             if (isIndia) {
-                updateData.credit = 999;
+                updateData.credit = { increment: 5 };
             }
         } else {
             updateData = {
