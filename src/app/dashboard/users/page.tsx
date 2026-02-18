@@ -25,10 +25,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {Switch} from "@/components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -62,12 +62,7 @@ import {
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+
 import { toast } from "sonner";
 import clsx from "clsx";
 import { format } from "date-fns";
@@ -99,7 +94,7 @@ export default function UsersPage() {
   const [pageSize, setPageSize] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+
   const [sortConfig, setSortConfig] = useState<{
     key: string;
     direction: "asc" | "desc";
@@ -117,7 +112,7 @@ export default function UsersPage() {
     "total"
   );
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Subscription Dialog States
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [userForSub, setUserForSub] = useState<User | null>(null);
@@ -129,7 +124,7 @@ export default function UsersPage() {
   // View Details States
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [userDetails, setUserDetails] = useState<{user: any, transactions: any[]} | null>(null);
+  const [userDetails, setUserDetails] = useState<{ user: any, transactions: any[] } | null>(null);
 
   // Sidebar persistence
   useEffect(() => {
@@ -168,7 +163,7 @@ export default function UsersPage() {
     } else {
       setLoading(true);
     }
-    
+
     try {
       // Build query parameters
       const params = new URLSearchParams({
@@ -179,7 +174,7 @@ export default function UsersPage() {
       if (filterText.trim()) {
         params.append("search", filterText.trim());
       }
-      
+
       if (statusFilter !== "all") {
         params.append("status", statusFilter);
       }
@@ -192,10 +187,10 @@ export default function UsersPage() {
         cache: "no-store",
       });
       if (!res.ok) throw new Error("Failed to fetch");
-      
+
       const data = await res.json();
       const normalized = (data.users || []).map(normalizeUser);
-      
+
       setUsers(normalized);
       setTotalUsers(data.total || 0);
       setTotalPages(data.totalPages || 1);
@@ -296,22 +291,7 @@ export default function UsersPage() {
 
   const paginatedUsers = filteredUsers;
 
-  const isAllSelected =
-    paginatedUsers.length > 0 &&
-    paginatedUsers.every((u) => selectedRows.includes(String(u.id)));
-  const isIndeterminate =
-    !isAllSelected &&
-    paginatedUsers.some((u) => selectedRows.includes(String(u.id)));
 
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedRows(checked ? paginatedUsers.map((u) => String(u.id)) : []);
-  };
-
-  const handleSelectRow = (id: string, checked: boolean) => {
-    setSelectedRows((prev) =>
-      checked ? [...prev, id] : prev.filter((x) => x !== id)
-    );
-  };
 
   const handleResetPassword = async (user: User) => {
     setUserToReset(user);
@@ -516,13 +496,7 @@ export default function UsersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox
-                            checked={isAllSelected}
-                            onCheckedChange={handleSelectAll}
-                            aria-label="Select all"
-                          />
-                        </TableHead>
+
                         <TableHead>
                           <Button
                             variant="ghost"
@@ -564,9 +538,6 @@ export default function UsersPage() {
                         [...Array(10)].map((_, i) => (
                           <TableRow key={i}>
                             <TableCell>
-                              <div className="h-4 w-4 bg-muted rounded animate-pulse" />
-                            </TableCell>
-                            <TableCell>
                               <div className="h-4 w-24 bg-muted rounded animate-pulse" />
                             </TableCell>
                             <TableCell>
@@ -591,7 +562,7 @@ export default function UsersPage() {
                       ) : paginatedUsers.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={5}
                             className="text-center py-16 text-muted-foreground"
                           >
                             No users found
@@ -599,26 +570,11 @@ export default function UsersPage() {
                         </TableRow>
                       ) : (
                         paginatedUsers.map((user) => {
-                          const isSelected = selectedRows.includes(
-                            String(user.id)
-                          );
-
                           return (
                             <TableRow
                               key={user.id}
                               className="hover:bg-muted/50"
                             >
-                              <TableCell>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={(checked) =>
-                                    handleSelectRow(
-                                      String(user.id),
-                                      checked as boolean
-                                    )
-                                  }
-                                />
-                              </TableCell>
                               <TableCell className="font-medium">
                                 {user.mdr_id ?? user.id}
                               </TableCell>
@@ -639,7 +595,7 @@ export default function UsersPage() {
                               <TableCell className="text-center">
                                 <div className="flex flex-col items-center">
                                   <span className="font-bold text-sm">
-                                    {user.plan_id 
+                                    {user.plan_id
                                       ? user.plan_id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                       : "Free Tier"}
                                   </span>
@@ -650,7 +606,7 @@ export default function UsersPage() {
                                       const expiry = new Date(user.expiry_date);
                                       const now = new Date();
                                       if (expiry < now) return `Expired (${format(expiry, "dd MMM yyyy")})`;
-                                      
+
                                       return format(expiry, "dd MMM yyyy");
                                     })()}
                                   </span>
@@ -724,8 +680,7 @@ export default function UsersPage() {
                 {!loading && totalUsers > 0 && (
                   <div className="flex items-center justify-between px-6 py-4 border-t bg-muted/30">
                     <div className="text-sm text-muted-foreground">
-                      {selectedRows.length} of {totalUsers.toLocaleString()}{" "}
-                      selected
+                      {totalUsers.toLocaleString()} users
                     </div>
                     <div className="flex items-center gap-4">
                       <Select
@@ -1016,178 +971,211 @@ export default function UsersPage() {
                 <p className="text-muted-foreground animate-pulse">Fetching user data...</p>
               </div>
             ) : userDetails ? (
-              <Tabs defaultValue="overview" className="w-full mt-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="overview">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    Overview
-                  </TabsTrigger>
-                  <TabsTrigger value="transactions">
-                    <History className="mr-2 h-4 w-4" />
-                    Transactions
-                  </TabsTrigger>
-                </TabsList>
+              <div className="w-full mt-4 space-y-6">
+                {/* Profile Information - Full Width */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <Label className="text-lg font-semibold flex items-center gap-2">
+                      <UserIcon className="h-4 w-4 text-primary" />
+                      Profile Information
+                    </Label>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-start gap-3">
+                        <UserIcon className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Full Name</p>
+                          <p className="font-medium text-sm">
+                            {userDetails.user.first_name} {userDetails.user.middle_name || ""} {userDetails.user.last_name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
+                          <p className="font-medium text-sm">{userDetails.user.email}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Phone className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
+                          <p className="font-medium text-sm">{userDetails.user.phone_num || "N/A"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Address</p>
+                          <p className="font-medium text-sm">
+                            {[
+                              userDetails.user.address,
+                              userDetails.user.city,
+                              userDetails.user.state,
+                              userDetails.user.country
+                            ].filter(Boolean).join(", ") || "No address on file"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <TabsContent value="overview" className="space-y-6 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Basic Info */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <Label className="text-lg font-semibold flex items-center gap-2">
-                          <ShieldCheck className="h-4 w-4 text-primary" />
-                          Profile Information
-                        </Label>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <UserIcon className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Full Name</p>
-                            <p className="font-medium text-sm">
-                              {userDetails.user.first_name} {userDetails.user.middle_name || ""} {userDetails.user.last_name}
-                            </p>
-                          </div>
+                {/* Subscription Status + Transactions */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        Subscription Status
+                      </Label>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex items-center gap-1.5 text-xs h-8"
+                        onClick={() => {
+                          // Build a User-compatible object from userDetails
+                          const u = userDetails.user;
+                          const asUser: User = {
+                            id: u.id,
+                            mdr_id: u.mdr_id ?? null,
+                            first_name: u.first_name ?? "",
+                            last_name: u.last_name ?? "",
+                            email: u.email ?? "",
+                            phone_num: u.phone_num ?? null,
+                            expiry_date: u.expiry_date ?? null,
+                            created_at: u.created_at ?? null,
+                            region: u.region ?? "",
+                            user_plan_active: !!u.user_plan_active,
+                            plan_id: u.plan_id ?? null,
+                          };
+                          setUserForSub(asUser);
+                          setSelectedPlanId(u.plan_id || "");
+                          if (u.expiry_date) {
+                            setCustomExpiry(new Date(u.expiry_date).toISOString().split("T")[0]);
+                          } else {
+                            setCustomExpiry("");
+                          }
+                          setViewDialogOpen(false);
+                          setSubDialogOpen(true);
+                        }}
+                      >
+                        <CreditCard className="h-3.5 w-3.5" />
+                        Add / Edit Subscription
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-1">
+                          <Badge variant={userDetails.user.user_plan_active ? "default" : "secondary"}>
+                            {userDetails.user.user_plan_active ? "Active" : "Inactive"}
+                          </Badge>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <Mail className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Email</p>
-                            <p className="font-medium text-sm">{userDetails.user.email}</p>
-                          </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Current Plan</p>
+                          <p className="font-bold text-sm">
+                            {userDetails.user.plan_id
+                              ? userDetails.user.plan_id.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                              : "Free Tier"}
+                          </p>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <Phone className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Phone</p>
-                            <p className="font-medium text-sm">{userDetails.user.phone_num || "N/A"}</p>
-                          </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Calendar className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Expiry Date</p>
+                          <p className="font-medium text-sm">
+                            {userDetails.user.expiry_date
+                              ? format(new Date(userDetails.user.expiry_date), "PPpp")
+                              : "Lifetime / No Expiry"}
+                          </p>
                         </div>
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Address</p>
-                            <p className="font-medium text-sm">
-                              {[
-                                userDetails.user.address,
-                                userDetails.user.city,
-                                userDetails.user.state,
-                                userDetails.user.country
-                              ].filter(Boolean).join(", ") || "No address on file"}
-                            </p>
-                          </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <CreditCard className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Credits Available</p>
+                          <p className="font-bold text-sm text-primary">{userDetails.user.credit || 0}</p>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
 
-                    {/* Subscription & System Info */}
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <Label className="text-lg font-semibold flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-primary" />
-                          Subscription Status
-                        </Label>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1">
-                            <Badge variant={userDetails.user.user_plan_active ? "default" : "secondary"}>
-                              {userDetails.user.user_plan_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Current Plan</p>
-                            <p className="font-bold text-sm">
-                              {userDetails.user.plan_id 
-                                ? userDetails.user.plan_id.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-                                : "Free Tier"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <Calendar className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Expiry Date</p>
-                            <p className="font-medium text-sm">
-                              {userDetails.user.expiry_date 
-                                ? format(new Date(userDetails.user.expiry_date), "PPpp")
-                                : "Lifetime / No Expiry"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <CreditCard className="h-4 w-4 mt-1 text-muted-foreground" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-semibold">Credits Available</p>
-                            <p className="font-bold text-sm text-primary">{userDetails.user.credit || 0}</p>
-                          </div>
-                        </div>
-                        <div className="pt-2 border-t mt-4">
-                          <p className="text-[10px] text-muted-foreground uppercase font-semibold">System IDs</p>
-                          <p className="text-[11px] font-mono ">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
-                          <p className="text-[11px] font-mono ">Internal ID: {userDetails.user.id}</p>
-                          <div className="text-[11px] font-mono mt-1 ">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
+                    <div className="pt-2 border-t">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">System IDs</p>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1">
+                        <p className="text-[11px] font-mono">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
+                        <p className="text-[11px] font-mono">Internal ID: {userDetails.user.id}</p>
+                        <div className="text-[11px] font-mono">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
+                      </div>
+                    </div>
 
-                <TabsContent value="transactions" className="pt-4">
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead className="w-[120px]">Date</TableHead>
-                          <TableHead>Order ID</TableHead>
-                          <TableHead>Plan</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
-                          <TableHead className="text-center">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {userDetails.transactions && userDetails.transactions.length > 0 ? (
-                          userDetails.transactions.map((tx: any) => (
-                            <TableRow key={tx.id} className="hover:bg-muted/30">
-                              <TableCell className="text-xs">
-                                {format(new Date(tx.datetime), "dd MMM yyyy")}
-                              </TableCell>
-                              <TableCell className="text-[11px] font-mono">
-                                {tx.orderid}
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-xs font-semibold">
-                                  {tx.plans?.plan_id?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || tx.plan_id || "Custom"}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground">
-                                  {tx.validity || tx.plans?.validity || "—"}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                {userDetails.user.region?.toLowerCase() === "usa" ? "$" : "₹"}
-                                {Number(tx.final_amount).toLocaleString()}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <Badge 
-                                  variant={tx.payment_status?.toLowerCase() === "success" ? "default" : "destructive"}
-                                  className="text-[10px] px-1 h-5 capitalize"
-                                >
-                                  {tx.payment_status || "Unknown"}
-                                </Badge>
-                              </TableCell>
+                    {/* Transaction History embedded */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground uppercase font-semibold mb-3 flex items-center gap-2">
+                        <History className="h-3.5 w-3.5" />
+                        Transaction History
+                      </p>
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-muted/50">
+                            <TableRow>
+                              <TableHead className="w-[120px]">Date</TableHead>
+                              <TableHead>Order ID</TableHead>
+                              <TableHead>Plan</TableHead>
+                              <TableHead className="text-right">Amount</TableHead>
+                              <TableHead className="text-center">Status</TableHead>
                             </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground text-sm italic">
-                              No transaction history found for this user.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                          </TableHeader>
+                          <TableBody>
+                            {userDetails.transactions && userDetails.transactions.length > 0 ? (
+                              userDetails.transactions.map((tx: any) => (
+                                <TableRow key={tx.id} className="hover:bg-muted/30">
+                                  <TableCell className="text-xs">
+                                    {format(new Date(tx.datetime), "dd MMM yyyy")}
+                                  </TableCell>
+                                  <TableCell className="text-[11px] font-mono">
+                                    {tx.orderid}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="text-xs font-semibold">
+                                      {tx.plans?.plan_id?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || tx.plan_id || "Custom"}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground">
+                                      {tx.validity || tx.plans?.validity || "—"}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium">
+                                    {userDetails.user.region?.toLowerCase() === "usa" ? "$" : "₹"}
+                                    {Number(tx.final_amount).toLocaleString()}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    <Badge
+                                      variant={tx.payment_status?.toLowerCase() === "success" ? "default" : "destructive"}
+                                      className="text-[10px] px-1 h-5 capitalize"
+                                    >
+                                      {tx.payment_status || "Unknown"}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground text-sm italic">
+                                  No transaction history found for this user.
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ) : (
               <div className="py-20 text-center text-muted-foreground">
                 <ShieldCheck className="h-10 w-10 mx-auto mb-2 opacity-20" />
