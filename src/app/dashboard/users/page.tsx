@@ -1063,7 +1063,6 @@ export default function UsersPage() {
                           } else {
                             setCustomExpiry("");
                           }
-                          setViewDialogOpen(false);
                           setSubDialogOpen(true);
                         }}
                       >
