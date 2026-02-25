@@ -1016,6 +1016,15 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="pt-4 mt-4 border-t">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">System IDs</p>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1">
+                        <p className="text-[11px] font-mono">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
+                        <p className="text-[11px] font-mono">Internal ID: {userDetails.user.id}</p>
+                        <div className="text-[11px] font-mono">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1108,14 +1117,6 @@ export default function UsersPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t">
-                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">System IDs</p>
-                      <div className="flex flex-wrap gap-x-6 gap-y-1">
-                        <p className="text-[11px] font-mono">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
-                        <p className="text-[11px] font-mono">Internal ID: {userDetails.user.id}</p>
-                        <div className="text-[11px] font-mono">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
-                      </div>
-                    </div>
 
                     {/* Transaction History embedded */}
                     <div className="pt-2 border-t">
@@ -1127,9 +1128,9 @@ export default function UsersPage() {
                         <Table>
                           <TableHeader className="bg-muted/50">
                             <TableRow>
-                              <TableHead className="w-[120px]">Date</TableHead>
-                              <TableHead>Order ID</TableHead>
                               <TableHead>Plan</TableHead>
+                              <TableHead>Order ID</TableHead>
+                              <TableHead className="w-[120px]">Date</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
                               <TableHead className="text-center">Status</TableHead>
                             </TableRow>
@@ -1138,12 +1139,6 @@ export default function UsersPage() {
                             {userDetails.transactions && userDetails.transactions.length > 0 ? (
                               userDetails.transactions.map((tx: any) => (
                                 <TableRow key={tx.id} className="hover:bg-muted/30">
-                                  <TableCell className="text-xs">
-                                    {format(new Date(tx.datetime), "dd MMM yyyy")}
-                                  </TableCell>
-                                  <TableCell className="text-[11px] font-mono">
-                                    {tx.orderid}
-                                  </TableCell>
                                   <TableCell>
                                     <div className="text-xs font-semibold">
                                       {tx.plans?.plan_id?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || tx.plan_id || "Custom"}
@@ -1151,6 +1146,12 @@ export default function UsersPage() {
                                     <div className="text-[10px] text-muted-foreground">
                                       {tx.validity || tx.plans?.validity || "—"}
                                     </div>
+                                  </TableCell>
+                                  <TableCell className="text-[11px] font-mono">
+                                    {tx.orderid}
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    {format(new Date(tx.datetime), "dd MMM yyyy")}
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                     {userDetails.user.region?.toLowerCase() === "usa" ? "$" : "₹"}
