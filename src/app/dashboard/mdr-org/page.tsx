@@ -657,7 +657,7 @@ return (
 
     {/* EDIT DIALOG */}
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-  <DialogContent>
+  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
     <DialogHeader>
       <DialogTitle>
         {editMode ? "Edit User" : "Create User"}
@@ -815,7 +815,7 @@ return (
 
     {/* VIEW DIALOG */}
     <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>User Details</DialogTitle>
           <DialogDescription>
