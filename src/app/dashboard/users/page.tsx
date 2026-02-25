@@ -576,7 +576,8 @@ export default function UsersPage() {
                           return (
                             <TableRow
                               key={user.id}
-                              className="hover:bg-muted/50"
+                              className="hover:bg-muted/50 cursor-pointer"
+                              onClick={() => handleViewDetails(user)}
                             >
                               <TableCell className="font-medium">
                                 {user.mdr_id ?? user.id}
@@ -608,7 +609,7 @@ export default function UsersPage() {
                               <TableCell className="text-center text-sm">
                                 {getStatus(user)}
                               </TableCell>
-                              <TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon">
