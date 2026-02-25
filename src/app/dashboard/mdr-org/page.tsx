@@ -155,8 +155,33 @@ useEffect(() => {
 
 // HANDLE NEW USER  
 const handleSubmit = async () => {
+  // Client-side validation
+  if (!userFormData.first_name.trim()) {
+    setFormError("First Name is required");
+    toast.error("Please fill in the First Name");
+    return;
+  }
+  if (!userFormData.role) {
+    setFormError("Role is required");
+    toast.error("Please select a Role");
+    return;
+  }
+  if (!editMode && !userFormData.email.trim()) {
+    setFormError("Email is required");
+    toast.error("Please fill in the Email");
+    return;
+  }
+  
+  // Phone validation (only if provided)
+  if (userFormData.phone1 && userFormData.phone1.trim().length !== 10) {
+    setFormError("Phone number must be exactly 10 digits");
+    toast.error("Invalid phone number");
+    return;
+  }
+
   try {
     setSubmitting(true);
+    setFormError(null);
 
     const payload = editMode
       ? {
@@ -206,6 +231,7 @@ const handleSubmit = async () => {
 
   } catch (err) {
     console.error("Error saving user:", err);
+    toast.error("An unexpected error occurred");
   } finally {
     setSubmitting(false);
   }
@@ -698,12 +724,25 @@ return (
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Phone</label>
         <input
-          className="w-full border rounded-md px-3 py-2"
+          type="tel"
+          className={clsx(
+            "w-full border rounded-md px-3 py-2 transition-colors",
+            userFormData.phone1 && userFormData.phone1.trim().length !== 10 && "border-red-500 focus:ring-red-500"
+          )}
           value={userFormData.phone1}
-          onChange={(e) =>
-            setUserFormData({ ...userFormData, phone1: e.target.value })
-          }
+          placeholder="10-digit phone number"
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, ""); // Only permit digits
+            if (val.length <= 10) {
+              setUserFormData({ ...userFormData, phone1: val });
+            }
+          }}
         />
+        {userFormData.phone1 && userFormData.phone1.trim().length !== 10 && (
+          <p className="text-red-500 text-[11px] font-medium animate-in fade-in slide-in-from-top-1 duration-200">
+            Phone number must be exactly 10 digits.
+          </p>
+        )}
       </div>
        
        {/* Activity Status */}
