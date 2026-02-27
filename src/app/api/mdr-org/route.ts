@@ -121,6 +121,17 @@ export async function POST(req: Request) {
         ? body.role.toLowerCase()
         : body.role;
 
+    // Validation
+    if (!body.first_name?.trim()) {
+      return NextResponse.json({ error: "First Name is required" }, { status: 400 });
+    }
+    if (!body.email?.trim()) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+    if (!normalizedRole) {
+      return NextResponse.json({ error: "Role is required" }, { status: 400 });
+    }
+
     // Helper to treat empty strings as null (essential for unique but optional fields)
     const nullIfEmpty = (val: any) => (typeof val === 'string' && val.trim() === '' ? null : val);
 
@@ -183,6 +194,15 @@ export async function PUT(req: Request) {
       typeof body.role === "string"
         ? body.role.toLowerCase()
         : body.role;
+
+    // Validation
+    if (!body.first_name?.trim()) {
+      return NextResponse.json({ error: "First Name is required" }, { status: 400 });
+    }
+    if (!normalizedRole) {
+      return NextResponse.json({ error: "Role is required" }, { status: 400 });
+    }
+
     // Helper to treat empty strings as null
     const nullIfEmpty = (val: any) => (typeof val === 'string' && val.trim() === '' ? null : val);
 

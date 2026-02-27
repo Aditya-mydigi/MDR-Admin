@@ -525,9 +525,9 @@ export default function UsersPage() {
                           </Button>
                         </TableHead>
 
-                        <TableHead className="text-center">
-                          Subscriptions
-                        </TableHead>
+                        <TableHead className="text-center">Plan</TableHead>
+                        <TableHead className="text-center">Expiry Date</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
                         <TableHead className="w-12" />
                       </TableRow>
                     </TableHeader>
@@ -551,10 +551,13 @@ export default function UsersPage() {
                             </TableCell>
 
                             <TableCell>
-                              <div className="flex flex-col items-center space-y-1">
-                                <div className="h-4 w-20 bg-muted rounded animate-pulse" />
-                                <div className="h-3 w-12 bg-muted/60 rounded animate-pulse" />
-                              </div>
+                              <div className="h-4 w-24 bg-muted rounded animate-pulse mx-auto" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 w-24 bg-muted rounded animate-pulse mx-auto" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 w-24 bg-muted rounded animate-pulse mx-auto" />
                             </TableCell>
                             <TableCell />
                           </TableRow>
@@ -562,7 +565,7 @@ export default function UsersPage() {
                       ) : paginatedUsers.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={7}
                             className="text-center py-16 text-muted-foreground"
                           >
                             No users found
@@ -573,7 +576,8 @@ export default function UsersPage() {
                           return (
                             <TableRow
                               key={user.id}
-                              className="hover:bg-muted/50"
+                              className="hover:bg-muted/50 cursor-pointer"
+                              onClick={() => handleViewDetails(user)}
                             >
                               <TableCell className="font-medium">
                                 {user.mdr_id ?? user.id}
@@ -593,26 +597,19 @@ export default function UsersPage() {
                               </TableCell>
 
                               <TableCell className="text-center">
-                                <div className="flex flex-col items-center">
-                                  <span className="font-bold text-sm">
-                                    {user.plan_id
-                                      ? user.plan_id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-                                      : "Free Tier"}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground">
-                                    {(() => {
-                                      if (!user.user_plan_active) return "Inactive";
-                                      if (!user.expiry_date) return "Lifetime";
-                                      const expiry = new Date(user.expiry_date);
-                                      const now = new Date();
-                                      if (expiry < now) return `Expired (${format(expiry, "dd MMM yyyy")})`;
-
-                                      return format(expiry, "dd MMM yyyy");
-                                    })()}
-                                  </span>
-                                </div>
+                                <span className="font-bold text-sm">
+                                  {user.plan_id
+                                    ? user.plan_id.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+                                    : "Free Tier"}
+                                </span>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-center text-sm">
+                                {user.expiry_date ? format(new Date(user.expiry_date), "dd MMM yyyy") : "Lifetime"}
+                              </TableCell>
+                              <TableCell className="text-center text-sm">
+                                {getStatus(user)}
+                              </TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon">
@@ -1020,6 +1017,15 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="pt-4 mt-4 border-t">
+                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">System IDs</p>
+                      <div className="flex flex-wrap gap-x-6 gap-y-1">
+                        <p className="text-[11px] font-mono">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
+                        <p className="text-[11px] font-mono">Internal ID: {userDetails.user.id}</p>
+                        <div className="text-[11px] font-mono">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1029,7 +1035,7 @@ export default function UsersPage() {
                     <div className="flex items-center justify-between">
                       <Label className="text-lg font-semibold flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-primary" />
-                        Subscription Status
+                        Subscription 
                       </Label>
                       <Button
                         size="sm"
@@ -1058,7 +1064,6 @@ export default function UsersPage() {
                           } else {
                             setCustomExpiry("");
                           }
-                          setViewDialogOpen(false);
                           setSubDialogOpen(true);
                         }}
                       >
@@ -1068,13 +1073,9 @@ export default function UsersPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="mt-1">
-                          <Badge variant={userDetails.user.user_plan_active ? "default" : "secondary"}>
-                            {userDetails.user.user_plan_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
+                        <CreditCard className="h-4 w-4 mt-1 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground uppercase font-semibold">Current Plan</p>
                           <p className="font-bold text-sm">
@@ -1090,13 +1091,25 @@ export default function UsersPage() {
                           <p className="text-xs text-muted-foreground uppercase font-semibold">Expiry Date</p>
                           <p className="font-medium text-sm">
                             {userDetails.user.expiry_date
-                              ? format(new Date(userDetails.user.expiry_date), "PPpp")
+                              ? format(new Date(userDetails.user.expiry_date), "dd MMM yyyy")
                               : "Lifetime / No Expiry"}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <CreditCard className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <ShieldCheck className="h-4 w-4 mt-1 text-muted-foreground" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-semibold">Status</p>
+                          <p className="font-medium text-sm">
+                            {getStatus({
+                              ...userDetails.user,
+                              user_plan_active: !!userDetails.user.user_plan_active
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <RotateCcw className="h-4 w-4 mt-1 text-muted-foreground" />
                         <div>
                           <p className="text-xs text-muted-foreground uppercase font-semibold">Credits Available</p>
                           <p className="font-bold text-sm text-primary">{userDetails.user.credit || 0}</p>
@@ -1104,14 +1117,6 @@ export default function UsersPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t">
-                      <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1">System IDs</p>
-                      <div className="flex flex-wrap gap-x-6 gap-y-1">
-                        <p className="text-[11px] font-mono">MDR-ID: {userDetails.user.mdr_id || "N/A"}</p>
-                        <p className="text-[11px] font-mono">Internal ID: {userDetails.user.id}</p>
-                        <div className="text-[11px] font-mono">Region: <Badge variant="outline" className="text-[9px] h-4 uppercase">{userDetails.user.region || "India"}</Badge></div>
-                      </div>
-                    </div>
 
                     {/* Transaction History embedded */}
                     <div className="pt-2 border-t">
@@ -1123,9 +1128,9 @@ export default function UsersPage() {
                         <Table>
                           <TableHeader className="bg-muted/50">
                             <TableRow>
-                              <TableHead className="w-[120px]">Date</TableHead>
-                              <TableHead>Order ID</TableHead>
                               <TableHead>Plan</TableHead>
+                              <TableHead>Order ID</TableHead>
+                              <TableHead className="w-[120px]">Date</TableHead>
                               <TableHead className="text-right">Amount</TableHead>
                               <TableHead className="text-center">Status</TableHead>
                             </TableRow>
@@ -1134,12 +1139,6 @@ export default function UsersPage() {
                             {userDetails.transactions && userDetails.transactions.length > 0 ? (
                               userDetails.transactions.map((tx: any) => (
                                 <TableRow key={tx.id} className="hover:bg-muted/30">
-                                  <TableCell className="text-xs">
-                                    {format(new Date(tx.datetime), "dd MMM yyyy")}
-                                  </TableCell>
-                                  <TableCell className="text-[11px] font-mono">
-                                    {tx.orderid}
-                                  </TableCell>
                                   <TableCell>
                                     <div className="text-xs font-semibold">
                                       {tx.plans?.plan_id?.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || tx.plan_id || "Custom"}
@@ -1147,6 +1146,12 @@ export default function UsersPage() {
                                     <div className="text-[10px] text-muted-foreground">
                                       {tx.validity || tx.plans?.validity || "—"}
                                     </div>
+                                  </TableCell>
+                                  <TableCell className="text-[11px] font-mono">
+                                    {tx.orderid}
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    {format(new Date(tx.datetime), "dd MMM yyyy")}
                                   </TableCell>
                                   <TableCell className="text-right font-medium">
                                     {userDetails.user.region?.toLowerCase() === "usa" ? "$" : "₹"}
