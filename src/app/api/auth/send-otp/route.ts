@@ -3,6 +3,7 @@ import { generateAndSendOtp } from "@/lib/email";
 import { prismaPanel } from "@/lib/prisma-panel";
 
 export async function POST(req: Request) {
+  console.log("SEND OTP API HIT");
   try {
     const { email } = await req.json();
     const lower = email?.toLowerCase();
