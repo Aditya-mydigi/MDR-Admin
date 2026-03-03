@@ -40,6 +40,7 @@ type ServiceEndpoint = {
   label: string;
   path: string;
   region?: string;
+  prodUrl?: string;
 };
 
 type HealthService = {
@@ -86,8 +87,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Auth",
     description: "Login, OTP and account access endpoints.",
     endpoints: [
-      { id: "auth-us", label: "US", path: "/auth-mydig/api/us/health", region: "US" },
-      { id: "auth-in", label: "India", path: "/auth-mydig/api/in/health", region: "IN" },
+      {
+        id: "auth-us",
+        label: "US",
+        path: "/auth-mydig/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/auth-mydig-v2",
+      },
+      {
+        id: "auth-in",
+        label: "India",
+        path: "/auth-mydig/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/auth-mydig-v2",
+      },
     ],
   },
   {
@@ -95,8 +108,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "HealthHub",
     description: "Hub for care plans and vitals.",
     endpoints: [
-      { id: "healthhub-us", label: "US", path: "/healthhub-mydi-api/api/us/health", region: "US" },
-      { id: "healthhub-in", label: "India", path: "/healthhub-mydi-api/api/in/health", region: "IN" },
+      {
+        id: "healthhub-us",
+        label: "US",
+        path: "/healthhub-mydi-api/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/healthhub-mydi-api-v2",
+      },
+      {
+        id: "healthhub-in",
+        label: "India",
+        path: "/healthhub-mydi-api/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/healthhub-mydi-api-v2",
+      },
     ],
   },
   {
@@ -104,8 +129,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Health Snapshot",
     description: "Aggregated health snapshot widgets.",
     endpoints: [
-      { id: "healthsnapshot-us", label: "US", path: "/healthsnapshot-mydig/api/us/health", region: "US" },
-      { id: "healthsnapshot-in", label: "India", path: "/healthsnapshot-mydig/api/in/health", region: "IN" },
+      {
+        id: "healthsnapshot-us",
+        label: "US",
+        path: "/healthsnapshot-mydig/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/healthsnapshot-mydig-v2",
+      },
+      {
+        id: "healthsnapshot-in",
+        label: "India",
+        path: "/healthsnapshot-mydig/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/healthsnapshot-mydig-v2",
+      },
     ],
   },
   {
@@ -122,8 +159,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Medication",
     description: "Medication management APIs.",
     endpoints: [
-      { id: "medication-us", label: "US", path: "/medication-mydig-api/api/us/health", region: "US" },
-      { id: "medication-in", label: "India", path: "/medication-mydig-api/api/in/health", region: "IN" },
+      {
+        id: "medication-us",
+        label: "US",
+        path: "/medication-mydig-api/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/medication-mydig-api-v2",
+      },
+      {
+        id: "medication-in",
+        label: "India",
+        path: "/medication-mydig-api/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/medication-mydig-api-v2",
+      },
     ],
   },
   {
@@ -131,8 +180,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Members",
     description: "Member profile and enrollment APIs.",
     endpoints: [
-      { id: "members-us", label: "US", path: "/members/api/us/health", region: "US" },
-      { id: "members-in", label: "India", path: "/members/api/in/health", region: "IN" },
+      {
+        id: "members-us",
+        label: "US",
+        path: "/members/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/members-v2",
+      },
+      {
+        id: "members-in",
+        label: "India",
+        path: "/members/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/members-v2",
+      },
     ],
   },
   {
@@ -140,25 +201,33 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Prenatal",
     description: "Prenatal program workflows.",
     endpoints: [
-      { id: "prenatal-us", label: "US", path: "/prenatal-mydig-api/api/us/health", region: "US" },
-      { id: "prenatal-in", label: "India", path: "/prenatal-mydig-api/api/in/health", region: "IN" },
+      {
+        id: "prenatal-us",
+        label: "US",
+        path: "/prenatal-mydig-api/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/prenatal-mydig-api-v2",
+      },
+      {
+        id: "prenatal-in",
+        label: "India",
+        path: "/prenatal-mydig-api/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/prenatal-mydig-api-v2",
+      },
     ],
   },
   {
     id: "records",
     name: "Records",
     description: "Medical record ingestion.",
-    endpoints: [
-      { id: "records-global", label: "Global", path: "/records-mydig/health" },
-    ],
+    endpoints: [{ id: "records-global", label: "Global", path: "/records-mydig/health" }],
   },
   {
     id: "uspayment",
     name: "US Payment",
     description: "Stripe and card orchestration (US).",
-    endpoints: [
-      { id: "uspayment", label: "US", path: "/uspayment/health", region: "US" },
-    ],
+    endpoints: [{ id: "uspayment", label: "US", path: "/uspayment/health", region: "US" }],
   },
   {
     id: "payment",
@@ -174,8 +243,20 @@ const SERVICE_CATALOG: HealthService[] = [
     name: "Vaccines",
     description: "Vaccination schedule services.",
     endpoints: [
-      { id: "vaccines-us", label: "US", path: "/vaccines-mydig-api/api/us/health", region: "US" },
-      { id: "vaccines-in", label: "India", path: "/vaccines-mydig-api/api/in/health", region: "IN" },
+      {
+        id: "vaccines-us",
+        label: "US",
+        path: "/vaccines-mydig-api/api/us/health",
+        region: "US",
+        prodUrl: "https://prod-mdr-us.mydigirecords.com/v1/vaccines-mydig-api-v2",
+      },
+      {
+        id: "vaccines-in",
+        label: "India",
+        path: "/vaccines-mydig-api/api/in/health",
+        region: "IN",
+        prodUrl: "https://prod-mdr-in.mydigirecords.com/v1/vaccines-mydig-api-v2",
+      },
     ],
   },
   {
@@ -269,43 +350,27 @@ export default function HealthChecksPage() {
 
   const fetchHealth = useCallback(
   async (endpoint: ServiceEndpoint, env: EnvironmentKey): Promise<EndpointStatus> => {
-    // Special case for MDR Pro
-    if (endpoint.id === "mdr-pro-in") {
-      const fullUrl =
+    // 1. Determine the target URL
+    let targetUrl: string | undefined;
+
+    if (env === "prod" && endpoint.prodUrl) {
+      targetUrl = endpoint.prodUrl;
+    } else if (endpoint.id === "mdr-pro-in") {
+      targetUrl =
         env === "dev"
           ? "https://dev-mdr-in.mydigirecords.com/v1/hims-backend/api/health"
-          : "https://prod-mdr-in.mydigirecords.com/v1/hims-backend/api/health"; // adjust prod if needed
-
-      const response = await fetch("/api/health-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: fullUrl }),
-      });
-
-      // ... same error/response handling as before
-      if (!response.ok) {
-        const errorMessage = await response.text();
-        return {
-          status: "down",
-          latency: null,
-          lastChecked: Date.now(),
-          error: errorMessage || "Health check failed",
-          url: fullUrl,
-        };
-      }
-
-      const payload = await response.json();
-      return payload as EndpointStatus;
+          : "https://prod-mdr-in.mydigirecords.com/v1/hims-backend/api/health";
     }
 
-    // All other endpoints: use existing path + env logic
+    // 2. Prepare the request body
+    const requestBody = targetUrl
+      ? { url: targetUrl }
+      : { path: endpoint.path, env };
+
     const response = await fetch("/api/health-check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path: endpoint.path,
-        env,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -314,8 +379,8 @@ export default function HealthChecksPage() {
         status: "down",
         latency: null,
         lastChecked: Date.now(),
-        error: errorMessage || "Health check proxy error",
-        url: `${BASE_URLS[env]}${endpoint.path}`,
+        error: errorMessage || "Health check failed",
+        url: targetUrl || `${BASE_URLS[env]}${endpoint.path}`,
       };
     }
 
