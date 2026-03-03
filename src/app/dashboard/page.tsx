@@ -78,6 +78,8 @@ interface KpiData {
   systemErrors: KpiItem;
 }
 
+import { useSystem } from "@/context/SystemContext";
+
 // ---------- Static table data (unchanged) ----------
 const tableData = [
   {
@@ -213,13 +215,6 @@ const initialKpiData: KpiData = {
   },
 };
 
-const calculateChange = (current: number, previous: number) => {
-  if (!previous || previous === 0) return "0%";
-  const diff = ((current - previous) / previous) * 100;
-  const formatted = diff.toFixed(1);
-  return `${diff >= 0 ? "+" : ""}${formatted}%`;
-};
-
 // ---------- Helper to generate synthetic trend data ----------
 const generateTrend = (baseValue: number, key: string): TrendData[] => {
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -236,7 +231,59 @@ const generateTrend = (baseValue: number, key: string): TrendData[] => {
   });
 };
 
+const mprStaticKpiData: KpiData = {
+  activeUsers: {
+    label: "Active Pets",
+    value: "1,240",
+    change: "+12%",
+    changeType: "positive",
+    trend: generateTrend(1240, "activeUsers"),
+  },
+  newSignups: {
+    label: "New Pet Registrations",
+    value: "85",
+    change: "+5.2%",
+    changeType: "positive",
+    trend: generateTrend(85, "newSignups"),
+  },
+  totalRecords: {
+    label: "Total Health Records",
+    value: "4,520",
+    change: "+18.4%",
+    changeType: "positive",
+    trend: generateTrend(4520, "totalRecords"),
+  },
+  revenue: {
+    label: "Pet Care Revenue",
+    value: "₹85,000",
+    change: "+10.5%",
+    changeType: "positive",
+    trend: generateTrend(85000, "revenue"),
+  },
+  appointments: {
+    label: "Vet Consultations",
+    value: "42",
+    change: "+2.1%",
+    changeType: "positive",
+    trend: generateTrend(42, "appointments"),
+  },
+  systemErrors: {
+    label: "System Health",
+    value: "0",
+    change: "0%",
+    changeType: "positive",
+    trend: generateTrend(0, "systemErrors"),
+  },
+};
+
+const mprStaticSpecialists = [
+  { id: "1", first_name: "Dr. Amit", last_name: "Sharma", email: "amit.vet@example.com", status: "Active" },
+  { id: "2", first_name: "Sarah", last_name: "Wilson", email: "sarah.pet@example.com", status: "Active" },
+  { id: "3", first_name: "Dr. Priya", last_name: "Patel", email: "priya.vet@example.com", status: "Active" },
+];
+
 export default function DashboardPage() {
+  const { system } = useSystem();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -261,6 +308,17 @@ export default function DashboardPage() {
 
   /* Fetch dashboard stats and update KPI cards */
   useEffect(() => {
+    setLoading(true); // Reset loading state on system/region change
+    
+    if (system === "MPR") {
+      setKpiData(mprStaticKpiData);
+      setLoading(false);
+      return;
+    }
+
+    // Reset to initial (MDR placeholders) when switching to MDR
+    setKpiData(initialKpiData);
+
     let mounted = true;
     const fetchStats = async () => {
       try {
@@ -385,7 +443,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [region]);
+  }, [region, system]);
 
 // active admins dashboard list
 const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
@@ -405,8 +463,20 @@ const [onlineAdminIds, setOnlineAdminIds] = useState<Set<string>>(new Set());
 
 // server-side filtering for table
 const fetchActiveAdmins = async () => {
+  setAdminsLoading(true);
+  
+  if (system === "MPR") {
+    setActiveAdmins(mprStaticSpecialists as any);
+    setAdminTotalPages(1);
+    setTotalUsers(mprStaticSpecialists.length);
+    setAdminsLoading(false);
+    return;
+  }
+
+  // Clear previous data when switching to MDR to avoid seeing MPR data
+  setActiveAdmins([]);
+  
   try {
-    setAdminsLoading(true);
 
     const params = new URLSearchParams({
       role: "admin",
@@ -435,10 +505,17 @@ const fetchActiveAdmins = async () => {
 
 useEffect(() => {
   async function heartbeat() {
-    await fetch("/api/mdr-org/users/heartbeat", {
-      method: "POST",
-      credentials: "include",
-    });
+    try {
+      const res = await fetch("/api/mdr-org/users/heartbeat", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok && res.status !== 401) {
+        console.warn(`Heartbeat failed: ${res.status}`);
+      }
+    } catch (err) {
+      console.error("Heartbeat error", err);
+    }
   }
 
   // ping immediately
@@ -456,30 +533,31 @@ useEffect(() => {
 // collect online admin ids
 useEffect(() => {
   async function fetchPresence() {
-  try {
-    const res = await fetch("/api/mdr-org/users/presence");
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/mdr-org/users/presence");
+      const data = await res.json();
 
-    if (!data || !Array.isArray(data.onlineAdminIds)) {
-      console.error("Unexpected presence response:", data);
+      if (!data || !Array.isArray(data.onlineAdminIds)) {
+        setOnlineAdminIds(new Set());
+        return;
+      }
+
+      setOnlineAdminIds(new Set(data.onlineAdminIds));
+    } catch (err) {
       setOnlineAdminIds(new Set());
-      return;
     }
-
-    setOnlineAdminIds(new Set(data.onlineAdminIds));
-  } catch (err) {
-    console.error("Failed to fetch presence", err);
-    setOnlineAdminIds(new Set());
   }
-}
+  
   fetchPresence();
+  const interval = setInterval(fetchPresence, 10_000); // Poll every 10 seconds
+  return () => clearInterval(interval);
 }, []);
 
 
 // ensures table updates immediately
 useEffect(() => {
   fetchActiveAdmins();
-}, [adminPage, adminLimit])
+}, [adminPage, adminLimit, system]);
 
 // handle view user
 const handleView = async (user: mdrPanelUser) => {
@@ -520,8 +598,8 @@ setViewUser(json.data ?? null);
   if (loading) return <Loader />;
 
   const colorFor = (key: string, changeType: string | undefined) => {
-    if (key === "systemErrors") return "#ef4444"; // red
-    if (changeType === "positive") return "#16a34a"; // green
+    if (key === "systemErrors") return system === "MDR" ? "#ef4444" : "#16a34a"; // red for MDR errors, green for MPR health
+    if (changeType === "positive") return system === "MDR" ? "#16a34a" : "#059669"; // green
     return "#f59e0b"; // yellow/orange
   };
 
@@ -546,11 +624,21 @@ setViewUser(json.data ?? null);
         />
         <main className="flex-1 overflow-y-auto p-8 space-y-8 bg-[#f8fafc]">
           {/* Welcome Banner */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0a3a7a] to-[#02b8f2] p-8 text-white shadow-xl shadow-[#0a3a7a]/10">
+          <div className={clsx(
+            "relative overflow-hidden rounded-3xl p-8 text-white shadow-xl transition-all duration-500",
+            system === "MDR" 
+              ? "bg-gradient-to-r from-[#0a3a7a] to-[#02b8f2] shadow-[#0a3a7a]/10" 
+              : "bg-gradient-to-r from-[#356e67] to-[#80c9b0] shadow-[#356e67]/10"
+          )}>
             <div className="relative z-10">
-              <h2 className="text-3xl font-bold tracking-tight mb-2">Welcome Back, Admin!</h2>
-              <p className="text-white/80 max-w-xl">
-                Here's what's happening across India and USA today. Track metrics, manage users, and monitor system health from one central hub.
+              <h2 className="text-4xl font-extrabold tracking-tight mb-3">
+                Welcome Back, {system === "MDR" ? "Admin" : "Admin"}!
+              </h2>
+              <p className="text-white/90 max-w-2xl text-lg leading-relaxed font-medium">
+                {system === "MDR" 
+                  ? "Here's what's happening across India and USA today. Track metrics, manage users, and monitor system health from one central hub."
+                  : "Here's what is happening across India and USA today. Track metrices, manage users, and monitor system health from one central hub."
+                }
               </p>
             </div>
             {/* Decorative background circles */}
@@ -563,20 +651,20 @@ setViewUser(json.data ?? null);
             <button
               onClick={() => setRegion("Total")}
               className={clsx(
-                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
                 region === "Total" 
-                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "bg-gradient-to-r from-[#356e67] to-[#80c9b0] text-white shadow-lg")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
-              Total Oversight
+              {system === "MDR" ? "Total Oversight" : "Total Oversight"}
             </button>
             <button
               onClick={() => setRegion("India")}
               className={clsx(
-                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
                 region === "India" 
-                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "text-[#356e67]")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -585,9 +673,9 @@ setViewUser(json.data ?? null);
             <button
               onClick={() => setRegion("USA")}
               className={clsx(
-                "px-6 py-2.5 text-sm font-bold transition-all duration-300 rounded-xl",
+                "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
                 region === "USA" 
-                  ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" 
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "text-[#356e67]")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -674,7 +762,7 @@ setViewUser(json.data ?? null);
             {/* Description */}
             <div className="px-4 py-4 border-b">
               <h3 className="text-md font-semibold text-gray-800">
-                  Active Admins
+                  {system === "MDR" ? "Active Admins" : "Active Pet Specialists"}
               </h3>
             </div>
 
@@ -760,7 +848,7 @@ setViewUser(json.data ?? null);
               {/* Pagination */}
               <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
                 <div className="text-sm text-gray-600 text-muted-foreground">
-                  {totalUsers} active admin(s).
+                  {totalUsers} {system === "MDR" ? "active admin(s)" : "active specialist(s)"}.
                 </div>
                 <div className="flex items-center gap-4">
                   <Select

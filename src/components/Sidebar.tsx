@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { useSystem } from "@/context/SystemContext";
 import {
-  Activity,
+  LayoutGrid,
   ChevronLeft,
   ChevronRight,
   CreditCard,
-  LayoutDashboard,
   LogOut,
   Users,
   Ticket,
   Building2,
+  Dog,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,14 +31,15 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { system } = useSystem();
 
   // Map icons to lucide-react icons
   const iconMap: Record<string, React.ReactNode> = {
-    Dashboard: <LayoutDashboard className="h-5 w-5" />,
+    Dashboard: <LayoutGrid className="h-5 w-5" />,
     User: <Users className="h-5 w-5" />,
     Subscriptions: <CreditCard className="h-5 w-5" />,
     Transaction: <CreditCard className="h-5 w-5" />,
-    "Health Monitor": <Activity className="h-5 w-5" />,
+    "Health Monitor": <Building2 className="h-5 w-5" />,
     Coupon: <Ticket className="h-5 w-5" />,
     "MDR Org": <Building2 className="h-5 w-5"/>,
     "Log Out": <LogOut className="h-5 w-5" />,
@@ -70,7 +72,10 @@ export default function Sidebar({
 
       <aside
         className={clsx(
-          "fixed lg:sticky top-0 left-0 z-50 h-screen bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a] text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg",
+          "fixed lg:sticky top-0 left-0 z-50 h-screen text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg",
+          system === "MDR" 
+            ? "bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a]" 
+            : "bg-[#356e67]",
           collapsed ? "w-20" : "w-64",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -80,23 +85,23 @@ export default function Sidebar({
           {/* Logo Section */}
           <div
             className={clsx(
-              "flex justify-center items-center pt-6 pb-4 transition-all duration-300",
+              "flex justify-center items-center pt-8 pb-6 transition-all duration-300",
               collapsed ? "px-2" : "px-6"
             )}
           >
             {collapsed ? (
-              <div className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-extrabold uppercase border-2 border-white/20 text-xs">
-                MDR
+              <div className="w-14 h-14 rounded-full bg-transparent flex items-center justify-center text-white font-bold uppercase border-2 border-white text-base">
+                MPR
               </div>
             ) : (
               <div className="text-center">
-                <div className="relative flex items-center justify-center mb-2">
-                  <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white font-extrabold uppercase border-2 border-white/20 text-base">
-                    MDR
+                <div className="relative flex items-center justify-center mb-3">
+                  <div className="w-16 h-16 rounded-full bg-transparent flex items-center justify-center text-white font-bold uppercase border-2 border-white text-xl">
+                    {system === "MDR" ? "MDR" : "MPR"}
                   </div>
                 </div>
-                <div className="text-xs font-semibold text-white/90">
-                  MYDIGIRECORDS
+                <div className="text-xs font-black text-white/90 tracking-widest uppercase">
+                  {system === "MDR" ? "MYDIGIRECORDS" : "MYPETSRECORDS"}
                 </div>
               </div>
             )}
@@ -108,16 +113,16 @@ export default function Sidebar({
 
         {/* Collapse Toggle Button - Simple and Prominent (Desktop Only) */}
         {onToggleCollapse && (
-          <div className="py-3 hidden lg:flex justify-center border-b border-white/10">
+          <div className="py-6 hidden lg:flex justify-center border-b border-white/10">
             <button
               onClick={onToggleCollapse}
               className="p-1.5 text-white hover:bg-white/10 rounded transition-colors"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {collapsed ? (
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-5 w-5" strokeWidth={3} />
               ) : (
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-5 w-5" strokeWidth={3} />
               )}
             </button>
           </div>
@@ -127,10 +132,10 @@ export default function Sidebar({
         <nav
           className={clsx(
             "flex-1 flex flex-col transition-all duration-300 overflow-y-auto overflow-x-hidden",
-            collapsed ? "px-2 pt-2" : "px-4 pt-2"
+            collapsed ? "px-2 pt-4" : "px-4 pt-4"
           )}
         >
-          <div className="space-y-2">
+          <div className="space-y-4">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -140,34 +145,21 @@ export default function Sidebar({
                   title={collapsed ? item.label : undefined}
                   onClick={onCloseMobile}
                   className={clsx(
-                    "flex items-center gap-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 relative group",
-                    collapsed ? "justify-center px-3" : "px-4",
+                    "flex items-center gap-4 py-3 rounded-lg text-sm transition-all duration-200 relative group",
+                    collapsed ? "justify-center px-3" : "px-5",
                     isActive
-                      ? item.label === "Billing Details"
-                        ? "bg-pink-50 text-pink-600 shadow-md"
-                        : "bg-white text-[#0a3a7a] shadow-md"
-                      : "text-white/90 hover:bg-white/10 hover:text-white"
+                      ? clsx(
+                          "bg-white shadow-lg font-bold",
+                          system === "MDR" ? "text-[#0a3a7a]" : "text-[#356e67]"
+                        )
+                      : "text-white/90 hover:bg-white/10 hover:text-white font-medium"
                   )}
                 >
-                  {/* Active Indicator */}
-                  {isActive && !collapsed && (
-                    <div
-                      className={clsx(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full",
-                        item.label === "Billing Details"
-                          ? "bg-pink-600"
-                          : "bg-white"
-                      )}
-                    />
-                  )}
-
                   <span
                     className={clsx(
                       "flex-shrink-0 transition-all duration-200",
                       isActive
-                        ? item.label === "Billing Details"
-                          ? "text-pink-600"
-                          : "text-[#0a3a7a]"
+                        ? system === "MDR" ? "text-[#0a3a7a]" : "text-[#356e67]"
                         : "text-white"
                     )}
                   >
@@ -175,26 +167,9 @@ export default function Sidebar({
                   </span>
 
                   {!collapsed && (
-                    <span
-                      className={clsx(
-                        "transition-all duration-200 whitespace-nowrap",
-                        isActive
-                          ? item.label === "Billing Details"
-                            ? "font-semibold text-pink-600"
-                            : "font-semibold text-[#0a3a7a]"
-                          : "font-medium"
-                      )}
-                    >
+                    <span className="whitespace-nowrap">
                       {item.label}
                     </span>
-                  )}
-
-                  {/* Tooltip for collapsed state */}
-                  {collapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg">
-                      {item.label}
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900" />
-                    </div>
                   )}
                 </Link>
               );
