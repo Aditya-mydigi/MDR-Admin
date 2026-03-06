@@ -309,7 +309,7 @@ export default function DashboardPage() {
   /* Fetch dashboard stats and update KPI cards */
   useEffect(() => {
     setLoading(true); // Reset loading state on system/region change
-    
+
     if (system === "MPR") {
       setKpiData(mprStaticKpiData);
       setLoading(false);
@@ -445,138 +445,139 @@ export default function DashboardPage() {
     };
   }, [region, system]);
 
-// active admins dashboard list
-const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
-const [adminsLoading, setAdminsLoading] = useState(false);
-const [adminPage, setAdminPage] = useState(1);
-const [adminLimit, setAdminLimit] = useState(5);
-const [adminTotalPages, setAdminTotalPages] = useState(1);
-// view dialog state
-const [viewDialogOpen, setViewDialogOpen] = useState(false);
-const [viewUser, setViewUser] = useState<any>(null);
-const [viewLoading, setViewLoading] = useState(false);
-const [totalUsers, setTotalUsers] = useState(0);
+  // active admins dashboard list
+  const [activeAdmins, setActiveAdmins] = useState<mdrPanelUser[]>([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminLimit, setAdminLimit] = useState(5);
+  const [adminTotalPages, setAdminTotalPages] = useState(1);
+  // view dialog state
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewUser, setViewUser] = useState<any>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const [totalUsers, setTotalUsers] = useState(0);
 
-const [users, setUsers] = useState<any[]>([]);
-const [onlineAdminIds, setOnlineAdminIds] = useState<Set<string>>(new Set());
+  const [users, setUsers] = useState<any[]>([]);
+  const [onlineAdminIds, setOnlineAdminIds] = useState<Set<string>>(new Set());
 
 
-// server-side filtering for table
-const fetchActiveAdmins = async () => {
-  setAdminsLoading(true);
-  
-  if (system === "MPR") {
-    setActiveAdmins(mprStaticSpecialists as any);
-    setAdminTotalPages(1);
-    setTotalUsers(mprStaticSpecialists.length);
-    setAdminsLoading(false);
-    return;
-  }
+  // server-side filtering for table
+  const fetchActiveAdmins = async () => {
+    setAdminsLoading(true);
 
-  // Clear previous data when switching to MDR to avoid seeing MPR data
-  setActiveAdmins([]);
-  
-  try {
+    if (system === "MPR") {
+      setActiveAdmins(mprStaticSpecialists as any);
+      setAdminTotalPages(1);
+      setTotalUsers(mprStaticSpecialists.length);
+      setAdminsLoading(false);
+      return;
+    }
 
-    const params = new URLSearchParams({
-      role: "admin",
-      status: "active",
-      page: String(adminPage),
-      limit: String(adminLimit),
-      sort: "asc",
-    });
-  
-    const res = await fetch(`/api/mdr-org?${params.toString()}`, {
-      cache: "no-store",
-    });
-  
-    const json = await res.json();
-
-    setActiveAdmins(Array.isArray(json.data) ? json.data : []);
-    setAdminTotalPages(json.pagination?.totalPages ?? 1);
-    setTotalUsers(json.pagination?.total ?? 0);
-  } catch (err) {
-    console.error("Failed to fetch active admins", err);
+    // Clear previous data when switching to MDR to avoid seeing MPR data
     setActiveAdmins([]);
-  } finally {
-    setAdminsLoading(false);
-  }
-};
 
-useEffect(() => {
-  async function heartbeat() {
     try {
-      const res = await fetch("/api/mdr-org/users/heartbeat", {
-        method: "POST",
-        credentials: "include",
+
+      const params = new URLSearchParams({
+        role: "admin",
+        status: "active",
+        page: String(adminPage),
+        limit: String(adminLimit),
+        sort: "asc",
       });
-      if (!res.ok && res.status !== 401) {
-        console.warn(`Heartbeat failed: ${res.status}`);
-      }
+
+      const res = await fetch(`/api/mdr-org?${params.toString()}`, {
+        cache: "no-store",
+      });
+
+      const json = await res.json();
+
+      setActiveAdmins(Array.isArray(json.data) ? json.data : []);
+      setAdminTotalPages(json.pagination?.totalPages ?? 1);
+      setTotalUsers(json.pagination?.total ?? 0);
     } catch (err) {
-      console.error("Heartbeat error", err);
+      console.error("Failed to fetch active admins", err);
+      setActiveAdmins([]);
+    } finally {
+      setAdminsLoading(false);
     }
-  }
+  };
 
-  // ping immediately
-  heartbeat();
+  useEffect(() => {
+    async function heartbeat() {
+      try {
+        const res = await fetch("/api/mdr-org/users/heartbeat", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok && res.status !== 401) {
+          console.warn(`Heartbeat failed: ${res.status}`);
+        }
+      } catch (err) {
+        console.error("Heartbeat error", err);
+      }
+    }
 
-  // ping every 30 seconds
-  const interval = setInterval(heartbeat, 30_000);
-  return () => clearInterval(interval);
-}, []);
+    // ping immediately
+    heartbeat();
 
-useEffect(() => {
-  console.log("onlineAdminIds:", Array.from(onlineAdminIds));
-}, [onlineAdminIds]);
+    // ping every 30 seconds
+    const interval = setInterval(heartbeat, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
-// collect online admin ids
-useEffect(() => {
-  async function fetchPresence() {
-    try {
-      const res = await fetch("/api/mdr-org/users/presence");
-      const data = await res.json();
+  useEffect(() => {
+    console.log("onlineAdminIds:", Array.from(onlineAdminIds));
+  }, [onlineAdminIds]);
 
-      if (!data || !Array.isArray(data.onlineAdminIds)) {
+  // collect online admin ids
+  useEffect(() => {
+    async function fetchPresence() {
+      try {
+        const res = await fetch("/api/mdr-org/users/presence");
+        const data = await res.json();
+
+        if (!data || !Array.isArray(data.onlineAdminIds)) {
+          setOnlineAdminIds(new Set());
+          return;
+        }
+
+        setOnlineAdminIds(new Set(data.onlineAdminIds));
+      } catch (err) {
         setOnlineAdminIds(new Set());
-        return;
       }
-
-      setOnlineAdminIds(new Set(data.onlineAdminIds));
-    } catch (err) {
-      setOnlineAdminIds(new Set());
     }
-  }
-  
-  fetchPresence();
-  const interval = setInterval(fetchPresence, 10_000); // Poll every 10 seconds
-  return () => clearInterval(interval);
-}, []);
+
+    fetchPresence();
+    const interval = setInterval(fetchPresence, 10_000); // Poll every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
 
-// ensures table updates immediately
-useEffect(() => {
-  fetchActiveAdmins();
-}, [adminPage, adminLimit, system]);
+  // ensures table updates immediately
+  useEffect(() => {
+    fetchActiveAdmins();
+  }, [adminPage, adminLimit, system]);
 
-// handle view user
-const handleView = async (user: mdrPanelUser) => {
+  // handle view user
+  const handleView = async (user: mdrPanelUser) => {
     setViewDialogOpen(true);
     setViewLoading(true);
 
-try {
-    const res = await fetch(`/api/mdr-org?id=${user.id}`, {
-    cache: "no-store",
-});
-// get full user details
-const json = await res.json();
-setViewUser(json.data ?? null);
-} catch (err) {
-    console.error("View user failed", err);
-    setViewUser(null);
-} finally {
-    setViewLoading(false);
-}};
+    try {
+      const res = await fetch(`/api/mdr-org?id=${user.id}`, {
+        cache: "no-store",
+      });
+      // get full user details
+      const json = await res.json();
+      setViewUser(json.data ?? null);
+    } catch (err) {
+      console.error("View user failed", err);
+      setViewUser(null);
+    } finally {
+      setViewLoading(false);
+    }
+  };
 
 
   const handleSelectAll = (checked: boolean) => {
@@ -597,10 +598,11 @@ setViewUser(json.data ?? null);
 
   if (loading) return <Loader />;
 
-  const colorFor = (key: string, changeType: string | undefined) => {
-    if (key === "systemErrors") return system === "MDR" ? "#ef4444" : "#16a34a"; // red for MDR errors, green for MPR health
-    if (changeType === "positive") return system === "MDR" ? "#16a34a" : "#059669"; // green
-    return "#f59e0b"; // yellow/orange
+  const colorFor = (key: string) => {
+    if (key === "revenue" || key === "newSignups") return "#f59e0c";
+    if (key === "systemErrors") return "#ef4444";
+    // default for totalRecords, appointments, activeUsers
+    return "#16a34a";
   };
 
   return (
@@ -626,16 +628,16 @@ setViewUser(json.data ?? null);
           {/* Welcome Banner */}
           <div className={clsx(
             "relative overflow-hidden rounded-3xl p-8 text-white shadow-xl transition-all duration-500",
-            system === "MDR" 
-              ? "bg-gradient-to-r from-[#0a3a7a] to-[#02b8f2] shadow-[#0a3a7a]/10" 
-              : "bg-gradient-to-r from-[#356e67] to-[#80c9b0] shadow-[#356e67]/10"
+            system === "MDR"
+              ? "bg-gradient-to-r from-[#0a3a7a] to-[#02b8f2] shadow-[#0a3a7a]/10"
+              : "bg-gradient-to-r from-[#20646d] via-[#509d8f] to-[#a2f09a] shadow-[#20646d]/10"
           )}>
             <div className="relative z-10">
               <h2 className="text-4xl font-extrabold tracking-tight mb-3">
                 Welcome Back, {system === "MDR" ? "Admin" : "Admin"}!
               </h2>
               <p className="text-white/90 max-w-2xl text-lg leading-relaxed font-medium">
-                {system === "MDR" 
+                {system === "MDR"
                   ? "Here's what's happening across India and USA today. Track metrics, manage users, and monitor system health from one central hub."
                   : "Here's what is happening across India and USA today. Track metrices, manage users, and monitor system health from one central hub."
                 }
@@ -652,8 +654,8 @@ setViewUser(json.data ?? null);
               onClick={() => setRegion("Total")}
               className={clsx(
                 "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
-                region === "Total" 
-                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "bg-gradient-to-r from-[#356e67] to-[#80c9b0] text-white shadow-lg")
+                region === "Total"
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "bg-gradient-to-r from-[#20646d] via-[#509d8f] to-[#a2f09a] text-white shadow-lg")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -663,8 +665,8 @@ setViewUser(json.data ?? null);
               onClick={() => setRegion("India")}
               className={clsx(
                 "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
-                region === "India" 
-                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "text-[#356e67]")
+                region === "India"
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "bg-gradient-to-r from-[#20646d] via-[#509d8f] to-[#a2f09a] text-white shadow-lg")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -674,8 +676,8 @@ setViewUser(json.data ?? null);
               onClick={() => setRegion("USA")}
               className={clsx(
                 "px-8 py-3 text-sm font-bold transition-all duration-300 rounded-xl",
-                region === "USA" 
-                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "text-[#356e67]")
+                region === "USA"
+                  ? (system === "MDR" ? "bg-[#0a3a7a] text-white shadow-lg shadow-[#0a3a7a]/20" : "bg-gradient-to-r from-[#20646d] via-[#509d8f] to-[#a2f09a] text-white shadow-lg")
                   : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
@@ -709,12 +711,8 @@ setViewUser(json.data ?? null);
                       {data.value}
                     </p>
                     <span
-                      className={clsx(
-                        "text-xs font-semibold px-2.5 py-1 rounded-full",
-                        data.changeType === "positive"
-                          ? "text-green-600 bg-green-50"
-                          : "text-yellow-600 bg-yellow-50"
-                      )}
+                      className="text-xs font-semibold"
+                      style={{ color: colorFor(key) }}
                     >
                       {data.change} from last month
                     </span>
@@ -739,12 +737,12 @@ setViewUser(json.data ?? null);
                         <Line
                           type="monotone"
                           dataKey="value"
-                          stroke={colorFor(key, data.changeType)}
+                          stroke={colorFor(key)}
                           strokeWidth={2.5}
                           dot={{
                             r: 3.2,
                             strokeWidth: 2,
-                            stroke: colorFor(key, data.changeType),
+                            stroke: colorFor(key),
                             fill: "#ffffff",
                           }}
                           activeDot={{ r: 4 }}
@@ -757,93 +755,93 @@ setViewUser(json.data ?? null);
             ))}
           </div>
           {/* New Data Table Section */}
-        <Card className="mt-6 max-w-full">
-          <CardContent className="p-0">
-            {/* Description */}
-            <div className="px-4 py-4 border-b">
-              <h3 className="text-md font-semibold text-gray-800">
+          <Card className="mt-6 max-w-full">
+            <CardContent className="p-0">
+              {/* Description */}
+              <div className="px-4 py-4 border-b">
+                <h3 className="text-md font-semibold text-gray-800">
                   {system === "MDR" ? "Active Admins" : "Active Pet Specialists"}
-              </h3>
-            </div>
+                </h3>
+              </div>
 
               {adminsLoading ? (
                 <div className="p-4 text-sm text-gray-600">Loading admins...</div>
-            ) : activeAdmins.length === 0 ? (
+              ) : activeAdmins.length === 0 ? (
                 <div className="p-4 text-sm text-gray-600">No active admins</div>
-            ) : (
-              
-            <div className="relative">
-              <Table>
-                <TableHeader className="bg-muted 40">
-                  <TableRow className="border-b last:border-b-0">
-                    <TableHead className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-md text-gray-700">
-                        First Name
-                      </div>
-                    </TableHead>
-                    <TableHead className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-md text-gray-700">
-                        Last Name
-                      </div>
-                    </TableHead>
-                    <TableHead className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-md text-gray-700">
-                        Email
-                      </div>
-                    </TableHead>
-                    <TableHead className="px-4 py-3 text-center">
-                      <div className="flex items-center gap-2 text-md text-gray-700">
-                        Status
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-center pr-6">
-                      <div className="flex items-center justify-center gap-3 text-md text-gray-700">
-                        Actions
-                      </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                  {/* Table Body */}
-                  <TableBody>
-                    {activeAdmins.map((admin) => (
-                      <TableRow key={admin.id}>
-                        <TableCell className="font-medium">
-                          {admin.first_name}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {admin.last_name}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {admin.email}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {onlineAdminIds.has(admin.id) ? (
-                            <span className="inline-flex items-center gap-1 text-green-600">
-                              <span className="h-2 w-2 rounded-full bg-green-500" />
-                              Online
-                              </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-gray-400">
-                              <span className="h-2 w-2 rounded-full bg-gray-300" />
-                              Offline
-                              </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="flex items-center justify-center gap-3">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleView(admin)}
-                            title="View Admin"
-                          >
-                            <Eye className="h-5 w-5" />
-                          </Button>
-                        </TableCell>
+              ) : (
+
+                <div className="relative">
+                  <Table>
+                    <TableHeader className="bg-muted 40">
+                      <TableRow className="border-b last:border-b-0">
+                        <TableHead className="px-4 py-3">
+                          <div className="flex items-center gap-2 text-md text-gray-700">
+                            First Name
+                          </div>
+                        </TableHead>
+                        <TableHead className="px-4 py-3">
+                          <div className="flex items-center gap-2 text-md text-gray-700">
+                            Last Name
+                          </div>
+                        </TableHead>
+                        <TableHead className="px-4 py-3">
+                          <div className="flex items-center gap-2 text-md text-gray-700">
+                            Email
+                          </div>
+                        </TableHead>
+                        <TableHead className="px-4 py-3 text-center">
+                          <div className="flex items-center gap-2 text-md text-gray-700">
+                            Status
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center pr-6">
+                          <div className="flex items-center justify-center gap-3 text-md text-gray-700">
+                            Actions
+                          </div>
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-            </div>
+                    </TableHeader>
+                    {/* Table Body */}
+                    <TableBody>
+                      {activeAdmins.map((admin) => (
+                        <TableRow key={admin.id}>
+                          <TableCell className="font-medium">
+                            {admin.first_name}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {admin.last_name}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {admin.email}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {onlineAdminIds.has(admin.id) ? (
+                              <span className="inline-flex items-center gap-1 text-green-600">
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                                Online
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-gray-400">
+                                <span className="h-2 w-2 rounded-full bg-gray-300" />
+                                Offline
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="flex items-center justify-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleView(admin)}
+                              title="View Admin"
+                            >
+                              <Eye className="h-5 w-5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
               {/* Pagination */}
               <div className="flex items-center justify-between px-6 py-4 border-t bg-gray-50">
@@ -871,14 +869,14 @@ setViewUser(json.data ?? null);
                     </SelectTrigger>
 
                     <SelectContent>
-                       {[5, 10, 15].map((n) => (
-                          <SelectItem key={n} value={String(n)}>
-                            {n}
-                          </SelectItem>
-                        ))}
+                      {[5, 10, 15].map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <div className="text-sm text-gray-600 text-muted-foreground">
                     Page {adminPage} of {adminTotalPages}
                   </div>
@@ -928,8 +926,8 @@ setViewUser(json.data ?? null);
                 </div>
               </div>
 
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
           {/* VIEW DIALOG */}
           <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
@@ -959,23 +957,23 @@ setViewUser(json.data ?? null);
                     {viewUser.isactive ? "Active" : "Inactive"}
                   </div>
                   <div>
-                    <strong>MDR ID:</strong>{" "} 
+                    <strong>MDR ID:</strong>{" "}
                     {viewUser.mdr_id ?? "—"}
                   </div>
-                  <div> 
+                  <div>
                     <strong>Date of Joining:</strong>{" "}
-                    {viewUser.date_of_joining ? new Date(viewUser.date_of_joining).toLocaleDateString() : "—"}  
+                    {viewUser.date_of_joining ? new Date(viewUser.date_of_joining).toLocaleDateString() : "—"}
                   </div>
                   <div>
                     <strong>Last Updated:</strong>{" "}
-                    {viewUser.updated_at ? new Date(viewUser.updated_at).toLocaleDateString() : "—"}    
+                    {viewUser.updated_at ? new Date(viewUser.updated_at).toLocaleDateString() : "—"}
+                  </div>
                 </div>
-              </div>
               ) : (
                 <div className="text-sm text-gray-600">No user data available.</div>
               )}
               <DialogFooter>
-                <Button variant= "outline" onClick={() => setViewDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
                   Close
                 </Button>
               </DialogFooter>
@@ -1128,13 +1126,13 @@ setViewUser(json.data ?? null);
                                   ? "bg-red-100 text-red-700"
                                   : typeof row.daysLeft === "number" &&
                                     row.daysLeft <= 10
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-green-100 text-green-700"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-green-100 text-green-700"
                               )}
                             >
                               {row.daysLeft}{" "}
                               {typeof row.daysLeft === "number" &&
-                              row.daysLeft === 1
+                                row.daysLeft === 1
                                 ? "Day"
                                 : "Days"}
                             </span>
