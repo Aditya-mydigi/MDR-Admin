@@ -55,7 +55,7 @@ export default function Header({
                         <Menu className="h-5 w-5" />
                     </button>
                 )}
-                
+
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2 text-xs font-medium text-gray-400 uppercase tracking-wider">
                         <span>Pages</span>
@@ -66,11 +66,11 @@ export default function Header({
                         "text-3xl font-extrabold tracking-tight transition-colors duration-300",
                         system === "MDR" ? "text-[#0a3a7a]" : "text-[#356e67]"
                     )}>
-                        {system === "MDR" ? title : "Dashboard"}
+                        {title}
                     </h1>
                 </div>
             </div>
-            
+
             <div className="flex items-center gap-6">
                 {/* System Switcher */}
                 <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shadow-inner">
@@ -78,8 +78,8 @@ export default function Header({
                         onClick={() => setSystem("MDR")}
                         className={clsx(
                             "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-300",
-                            system === "MDR" 
-                                ? "bg-white text-[#0a3a7a] shadow-sm" 
+                            system === "MDR"
+                                ? "bg-white text-[#0a3a7a] shadow-sm"
                                 : "text-gray-500 hover:text-gray-700"
                         )}
                     >
@@ -90,8 +90,8 @@ export default function Header({
                         onClick={() => setSystem("MPR")}
                         className={clsx(
                             "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-300",
-                            system === "MPR" 
-                                ? "bg-white text-green-600 shadow-sm" 
+                            system === "MPR"
+                                ? "bg-white text-green-600 shadow-sm"
                                 : "text-gray-500 hover:text-gray-700"
                         )}
                     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -32,6 +33,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { system } = useSystem();
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // Map icons to lucide-react icons
   const iconMap: Record<string, React.ReactNode> = {
@@ -41,7 +43,7 @@ export default function Sidebar({
     Transaction: <CreditCard className="h-5 w-5" />,
     "Health Monitor": <Building2 className="h-5 w-5" />,
     Coupon: <Ticket className="h-5 w-5" />,
-    "MDR Org": <Building2 className="h-5 w-5"/>,
+    "MDR Org": <Building2 className="h-5 w-5" />,
     "Log Out": <LogOut className="h-5 w-5" />,
   };
 
@@ -55,9 +57,13 @@ export default function Sidebar({
     { label: "MDR Org", href: "/dashboard/mdr-org" },
   ];
 
-  const handleLogout = () => {
+  const confirmLogout = () => {
     document.cookie = "session=; Max-Age=0; path=/";
     router.push("/login");
+  };
+
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
   };
 
   return (
@@ -73,9 +79,9 @@ export default function Sidebar({
       <aside
         className={clsx(
           "fixed lg:sticky top-0 left-0 z-50 h-screen text-white flex flex-col transition-all duration-300 ease-in-out shadow-lg",
-          system === "MDR" 
-            ? "bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a]" 
-            : "bg-[#356e67]",
+          system === "MDR"
+            ? "bg-gradient-to-b from-[#00f5ef] via-[#02b8f2] to-[#0a3a7a]"
+            : "bg-gradient-to-b from-[#20646d] via-[#509d8f] to-[#a2f09a]",
           collapsed ? "w-20" : "w-64",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -149,9 +155,9 @@ export default function Sidebar({
                     collapsed ? "justify-center px-3" : "px-5",
                     isActive
                       ? clsx(
-                          "bg-white shadow-lg font-bold",
-                          system === "MDR" ? "text-[#0a3a7a]" : "text-[#356e67]"
-                        )
+                        "bg-white shadow-lg font-bold",
+                        system === "MDR" ? "text-[#0a3a7a]" : "text-[#356e67]"
+                      )
                       : "text-white/90 hover:bg-white/10 hover:text-white font-medium"
                   )}
                 >
@@ -182,7 +188,7 @@ export default function Sidebar({
           {collapsed ? (
             <div className="flex flex-col items-center gap-2 px-2">
               <button
-                onClick={handleLogout}
+                onClick={handleLogoutClick}
                 className="p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
                 title="Log Out"
               >
@@ -193,7 +199,7 @@ export default function Sidebar({
             <div className="px-4">
               <div className="h-px bg-white/20 mb-3" />
               <button
-                onClick={handleLogout}
+                onClick={handleLogoutClick}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white transition-all duration-200"
               >
                 <LogOut className="h-5 w-5" />
@@ -203,6 +209,37 @@ export default function Sidebar({
           )}
         </div>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 transition-opacity">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                Log Out
+              </h3>
+              <p className="text-gray-700 text-lg mb-8">
+                Are you sure you want to Logout ?
+              </p>
+
+              <div className="flex justify-end gap-4 mt-8">
+                <button
+                  onClick={() => setIsLogoutModalOpen(false)}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
